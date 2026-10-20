@@ -1,14 +1,42 @@
 package com.example.calculator
 
 import android.graphics.Color
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.Looper
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
 import kotlin.concurrent.thread
+import kotlin.math.PI
+import kotlin.math.sin
 
 var activeMediaPlayer: MediaPlayer? = null // שומר על הנגן בחיים
+
+// מנגינת יזכור שקטה ועצובה המיוצרת בזמן אמת (ללא צורך בקובץ חיצוני)
+fun playSadMemorialMelody() {
+    thread {
+        try {
+            val sampleRate = 22050
+            val notes = listOf(440.0 to 480, 523.25 to 480, 493.88 to 480, 392.0 to 550, 329.63 to 680, 440.0 to 950)
+            for ((freq, dur) in notes) {
+                val numSamples = (dur * sampleRate) / 1000
+                val buffer = ShortArray(numSamples)
+                for (i in 0 until numSamples) {
+                    val env = sin((i.toDouble() / numSamples) * PI)
+                    buffer[i] = (sin(2.0 * PI * freq * i / sampleRate) * env * Short.MAX_VALUE * 0.4).toInt().toShort()
+                }
+                val track = AudioTrack.Builder()
+                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                    .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(sampleRate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                    .setBufferSizeInBytes(buffer.size * 2).setTransferMode(AudioTrack.MODE_STATIC).build()
+                track.write(buffer, 0, buffer.size); track.play(); Thread.sleep(dur.toLong() + 30); track.release()
+            }
+        } catch (_: Exception) {}
+    }
+}
 
 fun MainActivity.checkEasterEggs(input: String): Boolean {
     when (input) {
@@ -27,6 +55,10 @@ fun MainActivity.checkEasterEggs(input: String): Boolean {
         }
         "1010" -> {
             MiniGameEngine.startBombDefusal(this)
+            return true
+        }
+        "7777" -> {
+            MiniGameEngine.startAnimalParty(this)
             return true
         }
 
@@ -49,7 +81,7 @@ fun MainActivity.checkEasterEggs(input: String): Boolean {
             }
             return true
         }
-        "911" -> {
+                "911" -> {
             justCalculated = true
             val resId = resources.getIdentifier("siren", "raw", packageName)
             if (resId != 0) {
@@ -77,6 +109,7 @@ fun MainActivity.checkEasterEggs(input: String): Boolean {
             currentInput = "🎗️ לא נשכח ולא נסלח 🎗️"
             currentView?.text = currentInput
             justCalculated = true
+            playSadMemorialMelody()
             if (useHaptic) mainContent?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             return true
         }
