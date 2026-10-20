@@ -1,10 +1,14 @@
 package com.example.calculator
 
 import android.graphics.Color
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.os.Handler
 import android.os.Looper
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
+import kotlin.math.sin
 import kotlin.random.Random
 
 object MiniGameEngine {
@@ -13,7 +17,7 @@ object MiniGameEngine {
     private val handler = Handler(Looper.getMainLooper())
     private var gameLoop: Runnable? = null
 
-    // משתנים לאיקס עיגול (1337)
+    // משתנים לאיקס עיגול חכם (1337)
     private val tttBoard = Array(9) { "" }
 
     // משתנים לפולשי החשבון (8080)
@@ -21,29 +25,96 @@ object MiniGameEngine {
     private var invaderTrack = mutableListOf<String>()
     private val invaderSymbols = listOf("+", "−", "×", "÷", "sin", "cos", "tan", "√")
 
-    // משתנים למירוץ מכוניות (5555)
+    // משתנים למירוץ מכוניות לאורך המסך (5555)
     private var carLane = 1 // 0 = שמאל, 1 = אמצע, 2 = ימין
     private var racerScore = 0
-    private var obstacleLane = 1
-    private var obstacleType = "×" // × = מכשול, + = בונוס
-    private var obstacleDist = 5
+    private val roadRows = MutableList(5) { Pair(-1, "") }
 
     // משתנים לנטרול פצצה (1010)
     private var bombTimeLeft = 15
     private var bombScore = 0
     private var expectedOp = "×"
 
+    // משתנים למסיבת חיות מצפצפות (7777)
+    var isAnimalParty = false
+    private val savedKeyLabels = mutableMapOf<String, CharSequence>()
+    private val animalEmojis = listOf(
+        "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼",
+        "🐨", "🐯", "🦁", "🐮", "🐷", "🐸", "🐵", "🐔"
+    )
+
     fun stopGame(activity: MainActivity, message: String = "יצאת מהמשחק 🎮") {
         isActive = false
         currentGame = ""
+        isAnimalParty = false
         gameLoop?.let { handler.removeCallbacks(it) }
+        restoreAnimalLabels(activity)
         activity.currentInput = ""
         activity.justCalculated = false
         activity.applyTheme() // משחזר את כפתורי המקלדת והתצוגה
         Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
     }
 
-    // --- משחק 1: איקס עיגול על מקלדת המחשבון (קוד 1337) ---
+    // צליל צפצפת גומי סינתטי למסיבת החיות
+    fun playSqueakSound() {
+        Thread {
+            try {
+                val sampleRate = 22050
+                val durationMs = 140
+                val numSamples = (durationMs * sampleRate) / 1000
+                val buffer = ShortArray(numSamples)
+                var phase = 0.0
+                for (i in 0 until numSamples) {
+                    val progress = i.toDouble() / numSamples
+                    val freq = if (progress < 0.45) 1100.0 + (progress / 0.45) * 1600.0 else 2700.0 - ((progress - 0.45) / 0.55) * 1300.0
+                    val envelope = sin(progress * Math.PI)
+                    phase += 2.0 * Math.PI * freq / sampleRate
+                    val sample = (sin(phase) * 0.8 + sin(phase * 2.0) * 0.2) * envelope
+                    buffer[i] = (sample * Short.MAX_VALUE * 0.7).toInt().toShort()
+                }
+                val track = AudioTrack.Builder()
+                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                    .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(sampleRate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                    .setBufferSizeInBytes(buffer.size * 2).setTransferMode(AudioTrack.MODE_STATIC).build()
+                track.write(buffer, 0, buffer.size); track.play(); Thread.sleep(durationMs.toLong() + 25); track.release()
+            } catch (_: Exception) {}
+        }.start()
+    }
+
+    fun startAnimalParty(activity: MainActivity) {
+        stopPreviousLoop()
+        isActive = true
+        currentGame = "ANIMALS"
+        isAnimalParty = true
+        savedKeyLabels.clear()
+        val shuffled = animalEmojis.shuffled()
+        var idx = 0
+        for ((k, btn) in activity.keypadButtons) {
+            savedKeyLabels[k] = btn.text
+            if (k != "AC") { btn.text = shuffled[idx % shuffled.size]; idx++ }
+        }
+        activity.memoryIndicator?.text = "🐾 מסיבת חיות! לחץ לצפצוף | AC ליציאה"
+        activity.expressionView?.text = "חוזר למצב רגיל בעוד 15 שניות..."
+        activity.currentView?.text = "🐶 🐱 🐸 🦊 🐼"
+        playSqueakSound()
+        var left = 15
+        gameLoop = object : Runnable {
+            override fun run() {
+                if (!isActive || currentGame != "ANIMALS") return
+                left--
+                if (left <= 0) { stopGame(activity, "🐾 החיות חזרו לגן החיות!"); return }
+                activity.expressionView?.text = "חוזר למצב רגיל בעוד $left שניות..."
+                handler.postDelayed(this, 1000)
+            }
+        }
+        handler.postDelayed(gameLoop!!, 1000)
+    }
+
+    private fun restoreAnimalLabels(activity: MainActivity) {
+        for ((k, text) in savedKeyLabels) activity.keypadButtons[k]?.text = text
+        savedKeyLabels.clear()
+    }
+        // --- משחק 1: איקס עיגול חכם על מקלדת המחשבון (קוד 1337) ---
     fun startTicTacToe(activity: MainActivity) {
         stopPreviousLoop()
         isActive = true
@@ -60,7 +131,6 @@ object MiniGameEngine {
         val row3 = "[ ${tttBoard[0]} | ${tttBoard[1]} | ${tttBoard[2]} ]"
         activity.currentView?.text = "$row1\n$row2\n$row3"
 
-        // עדכון הכפתורים הפיזיים במקלדת!
         for (i in 0..8) {
             val btn = activity.keypadButtons[(i + 1).toString()]
             val mark = tttBoard[i]
@@ -88,8 +158,71 @@ object MiniGameEngine {
         return null
     }
 
-    // --- משחק 2: פולשי החשבון במחשבון המדעי (קוד 8080) ---
+    private fun getSmartComputerMove(): Int {
+        val free = (0..8).filter { tttBoard[it] !in listOf("×", "0") }
+        if (free.isEmpty()) return -1
+
+        // 1. ניצחון מיידי למחשב אם אפשר
+        for (i in free) {
+            val orig = tttBoard[i]; tttBoard[i] = "0"
+            if (checkWinner() == "0") { tttBoard[i] = orig; return i }
+            tttBoard[i] = orig
+        }
+        // 2. חסימה מיידית של השחקן
+        for (i in free) {
+            val orig = tttBoard[i]; tttBoard[i] = "×"
+            if (checkWinner() == "×") { tttBoard[i] = orig; return i }
+            tttBoard[i] = orig
+        }
+        // 3. חשיבה קדימה (Minimax) ב-82% מהמקרים כדי להיות חכם אך ניתן לניצחון
+        if (Random.nextFloat() < 0.82f) {
+            var bestScore = Int.MIN_VALUE
+            val bestMoves = mutableListOf<Int>()
+            for (i in free) {
+                val orig = tttBoard[i]; tttBoard[i] = "0"
+                val score = minimax(0, false)
+                tttBoard[i] = orig
+                if (score > bestScore) { bestScore = score; bestMoves.clear(); bestMoves.add(i) }
+                else if (score == bestScore) bestMoves.add(i)
+            }
+            if (bestMoves.isNotEmpty()) return bestMoves.random()
+        }
+        return free.random()
+    }
+
+    private fun minimax(depth: Int, isMaximizing: Boolean): Int {
+        when (checkWinner()) {
+            "0" -> return 10 - depth
+            "×" -> return depth - 10
+            "TIE" -> return 0
+        }
+        val free = (0..8).filter { tttBoard[it] !in listOf("×", "0") }
+        if (isMaximizing) {
+            var best = Int.MIN_VALUE
+            for (i in free) {
+                val orig = tttBoard[i]; tttBoard[i] = "0"
+                best = maxOf(best, minimax(depth + 1, false))
+                tttBoard[i] = orig
+            }
+            return best
+        } else {
+            var best = Int.MAX_VALUE
+            for (i in free) {
+                val orig = tttBoard[i]; tttBoard[i] = "×"
+                best = minOf(best, minimax(depth + 1, true))
+                tttBoard[i] = orig
+            }
+            return best
+        }
+    }
+        // --- משחק 2: פולשי החשבון במחשבון המדעי בלבד (קוד 8080) ---
     fun startCalcInvaders(activity: MainActivity) {
+        if (activity.currentTabIndex != 1) {
+            Toast.makeText(activity, "🔬 משחק זה זמין במחשבון המדעי בלבד!", Toast.LENGTH_LONG).show()
+            activity.currentInput = ""
+            activity.currentView?.text = "0"
+            return
+        }
         stopPreviousLoop()
         isActive = true
         currentGame = "INVADERS"
@@ -100,7 +233,6 @@ object MiniGameEngine {
         gameLoop = object : Runnable {
             override fun run() {
                 if (!isActive || currentGame != "INVADERS") return
-                // קידום הפולשים לכיוון החללית
                 val reachedShip = invaderTrack.removeAt(0)
                 if (reachedShip != ".") {
                     activity.shakeScreen()
@@ -123,57 +255,73 @@ object MiniGameEngine {
         activity.currentView?.text = "🚀 ⬅ " + invaderTrack.joinToString("  ")
     }
 
-    // --- משחק 3: מירוץ מכוניות מתמטי (קוד 5555) ---
+    // --- משחק 3: מירוץ מכוניות מתמטי לאורך המסך (קוד 5555) ---
     fun startMathRacer(activity: MainActivity) {
         stopPreviousLoop()
         isActive = true
         currentGame = "RACER"
         carLane = 1
         racerScore = 0
-        obstacleLane = Random.nextInt(3)
-        obstacleDist = 4
-        obstacleType = if (Random.nextBoolean()) "×" else "+"
-        activity.memoryIndicator?.text = "🏎️ מירוץ: 4=שמאל, 6=ימין, ×=פוצץ מכשול, +=טורבו"
+        for (i in 0 until 5) roadRows[i] = Pair(-1, "")
+        spawnRoadObstacle()
+        activity.memoryIndicator?.text = "🏎️ מירוץ: 4=שמאל, 6=ימין, 5/×=פוצץ מכשול, 8/+=טורבו"
 
         gameLoop = object : Runnable {
             override fun run() {
                 if (!isActive || currentGame != "RACER") return
-                obstacleDist--
-                if (obstacleDist <= 0) {
-                    if (obstacleLane == carLane) {
-                        if (obstacleType == "×") {
-                            activity.shakeScreen()
-                            stopGame(activity, "💥 התנגשת במחסום ×! ניקוד: $racerScore")
-                            return
-                        } else {
-                            racerScore += 5
-                        }
-                    } else {
-                        racerScore++
-                    }
-                    obstacleDist = 4
-                    obstacleLane = Random.nextInt(3)
-                    obstacleType = if (Random.nextFloat() < 0.7f) "×" else "+"
-                }
+                advanceRoad(activity)
+                if (!isActive) return
                 renderRacer(activity)
-                val speed = (750L - (racerScore * 15L)).coerceAtLeast(280L)
+                val speed = (720L - (racerScore * 12L)).coerceAtLeast(280L)
                 handler.postDelayed(this, speed)
             }
         }
         renderRacer(activity)
-        handler.postDelayed(gameLoop!!, 750)
+        handler.postDelayed(gameLoop!!, 720)
+    }
+
+    private fun spawnRoadObstacle() {
+        if (roadRows[1].first == -1 && Random.nextFloat() < 0.65f) {
+            roadRows[0] = Pair(Random.nextInt(3), if (Random.nextFloat() < 0.72f) "×" else "+")
+        } else roadRows[0] = Pair(-1, "")
+    }
+
+    private fun advanceRoad(activity: MainActivity) {
+        for (i in 4 downTo 1) roadRows[i] = roadRows[i - 1]
+        spawnRoadObstacle()
+        val bottom = roadRows[4]
+        if (bottom.first != -1) {
+            if (bottom.first == carLane) {
+                if (bottom.second == "×") {
+                    activity.shakeScreen()
+                    stopGame(activity, "💥 התנגשת במחסום ×! ניקוד: $racerScore")
+                    return
+                } else {
+                    racerScore += 5
+                    roadRows[4] = Pair(-1, "")
+                }
+            } else racerScore++
+        }
     }
 
     private fun renderRacer(activity: MainActivity) {
-        val lanes = arrayOf(" |   | ", " |   | ", " |   | ")
-        lanes[carLane] = " |🏎️| "
-        val obsLanes = arrayOf("  .  ", "  .  ", "  .  ")
-        obsLanes[obstacleLane] = " [$obstacleType] "
-        activity.expressionView?.text = "מרחק: ${obstacleDist}מ' | ${obsLanes.joinToString("")} | ניקוד: $racerScore"
-        activity.currentView?.text = lanes.joinToString("")
+        activity.expressionView?.text = "🏆 ניקוד: $racerScore | 4=⬅️ 5/×=💥 8/+=⚡ 6=➡️"
+        val sb = StringBuilder()
+        for (r in 0 until 5) {
+            val (obsLane, obsType) = roadRows[r]
+            val cells = Array(3) { lane ->
+                when {
+                    r == 4 && lane == carLane -> "🏎️"
+                    obsLane == lane -> if (obsType == "×") "🚧" else "⭐"
+                    else -> " · "
+                }
+            }
+            sb.append("║ ").append(cells[0]).append(" │ ").append(cells[1]).append(" │ ").append(cells[2]).append(" ║")
+            if (r < 4) sb.append("\n")
+        }
+        activity.currentView?.text = sb.toString()
     }
-
-    // --- משחק 4: נטרול פצצה מתמטית (קוד 1010) ---
+        // --- משחק 4: נטרול פצצה מתמטית (קוד 1010) ---
     fun startBombDefusal(activity: MainActivity) {
         stopPreviousLoop()
         isActive = true
@@ -223,30 +371,24 @@ object MiniGameEngine {
         }
 
         when (currentGame) {
+            "ANIMALS" -> {
+                playSqueakSound()
+                activity.currentView?.text = List(5) { animalEmojis.random() }.joinToString(" ")
+                return true
+            }
             "TTT" -> {
                 val idx = key.toIntOrNull()?.minus(1) ?: return true
                 if (idx in 0..8 && tttBoard[idx] !in listOf("×", "0")) {
                     tttBoard[idx] = "×"
                     var w = checkWinner()
-                    if (w != null) {
-                        finishTicTacToe(activity, w)
-                        return true
-                    }
-                    // תור המחשב (מציב 0)
-                    val free = (0..8).filter { tttBoard[it] !in listOf("×", "0") }
-                    if (free.isNotEmpty()) {
-                        tttBoard[free.random()] = "0"
-                    }
+                    if (w != null) { finishTicTacToe(activity, w); return true }
+                    val comp = getSmartComputerMove()
+                    if (comp != -1) tttBoard[comp] = "0"
                     w = checkWinner()
-                    if (w != null) {
-                        finishTicTacToe(activity, w)
-                    } else {
-                        updateTicTacToeUI(activity, "תורך! בחר משבצת פנויה (1-9)")
-                    }
+                    if (w != null) finishTicTacToe(activity, w) else updateTicTacToeUI(activity, "תורך! בחר משבצת פנויה (1-9)")
                 }
                 return true
             }
-
             "INVADERS" -> {
                 val targetIndex = invaderTrack.indexOfFirst { it != "." }
                 if (targetIndex != -1 && invaderTrack[targetIndex] == key) {
@@ -260,21 +402,20 @@ object MiniGameEngine {
                 }
                 return true
             }
-
             "RACER" -> {
                 when (key) {
                     "4" -> carLane = (carLane - 1).coerceAtLeast(0)
                     "6" -> carLane = (carLane + 1).coerceAtMost(2)
-                    "×" -> if (obstacleLane == carLane && obstacleType == "×") {
-                        obstacleType = "+" // פיצוץ המחסום והפיכתו לבונוס!
+                    "5", "×" -> for (r in 3 downTo 0) if (roadRows[r].first == carLane && roadRows[r].second == "×") {
+                        roadRows[r] = Pair(carLane, "+")
                         racerScore += 2
+                        break
                     }
-                    "+" -> racerScore++
+                    "8", "+" -> { racerScore++; advanceRoad(activity) }
                 }
-                renderRacer(activity)
+                if (isActive) renderRacer(activity)
                 return true
             }
-
             "BOMB" -> {
                 if (key in listOf("+", "−", "×", "÷")) {
                     if (key == expectedOp) {
@@ -294,7 +435,7 @@ object MiniGameEngine {
 
     private fun finishTicTacToe(activity: MainActivity, winner: String) {
         val msg = when (winner) {
-            "×" -> "🏆 ניצחת! × ניצח את 0! (לחץ על מקש כלשהו להתחלה מחדש או AC ליציאה)"
+            "×" -> "🏆 ניצחת! × ניצח את 0! (AC ליציאה)"
             "0" -> "🤖 המחשב (0) ניצח! נסה שוב"
             else -> "🤝 תיקו! משחק צמוד"
         }
@@ -306,3 +447,5 @@ object MiniGameEngine {
         gameLoop?.let { handler.removeCallbacks(it) }
     }
 }
+
+    
