@@ -497,6 +497,4 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 currentView?.animate()?.alpha(1f)?.scaleX(1f)?.scaleY(1f)?.setDuration(220)?.setInterpolator(OvershootInterpolator(1.2f))?.start()
             }
         }
-    }
-
-    private fun createUniversalConverter(
+    
