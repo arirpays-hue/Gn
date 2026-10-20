@@ -238,7 +238,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     fun feedback(view: View, symbol: String = "") {
         if (useHaptic) view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-        if (useSound) {
+        if (useSound && !MiniGameEngine.isAnimalParty) {  
             if (symbol == "AC" && acSoundId != 0) {
                 soundPool.play(acSoundId, 1f, 1f, 0, 0, 1f)
             } else if (soundType == 0) {
@@ -356,7 +356,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         val keypad = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         for (rowSymbols in rows) {
-            val rowLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+                        val rowLayout = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                                layoutDirection = if (isRightHanded) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR
+                        }
             for (symbol in rowSymbols) {
                 val weight = if (!isGrid5x7 && symbol == "0") 2f else 1f
                 val btn = createAnimatedButton(symbol, isGrid5x7)
