@@ -1,11 +1,13 @@
 package com.example.calculator
 
 import android.graphics.Color
+import android.graphics.Typeface
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
 import kotlin.math.sin
@@ -25,10 +27,11 @@ object MiniGameEngine {
     private var invaderTrack = mutableListOf<String>()
     private val invaderSymbols = listOf("+", "−", "×", "÷", "sin", "cos", "tan", "√")
 
-    // משתנים למירוץ מכוניות לאורך המסך (5555)
-    private var carLane = 1 // 0 = שמאל, 1 = אמצע, 2 = ימין
+    // משתנים למירוץ מכוניות מאוזן כמו החללית (5555)
+    private var carLane = 1 // 0 = נתיב עליון (מקש 8), 1 = אמצעי, 2 = תחתון (מקש 2)
     private var racerScore = 0
-    private val roadRows = MutableList(5) { Pair(-1, "") }
+    private val trackLength = 5
+    private val racerTracks = Array(3) { MutableList(5) { "." } }
 
     // משתנים לנטרול פצצה (1010)
     private var bombTimeLeft = 15
@@ -129,6 +132,8 @@ object MiniGameEngine {
         val row1 = "[ ${tttBoard[6]} | ${tttBoard[7]} | ${tttBoard[8]} ]"
         val row2 = "[ ${tttBoard[3]} | ${tttBoard[4]} | ${tttBoard[5]} ]"
         val row3 = "[ ${tttBoard[0]} | ${tttBoard[1]} | ${tttBoard[2]} ]"
+        activity.currentView?.gravity = Gravity.CENTER
+        activity.currentView?.typeface = Typeface.MONOSPACE
         activity.currentView?.text = "$row1\n$row2\n$row3"
 
         for (i in 0..8) {
@@ -162,19 +167,16 @@ object MiniGameEngine {
         val free = (0..8).filter { tttBoard[it] !in listOf("×", "0") }
         if (free.isEmpty()) return -1
 
-        // 1. ניצחון מיידי למחשב אם אפשר
         for (i in free) {
             val orig = tttBoard[i]; tttBoard[i] = "0"
             if (checkWinner() == "0") { tttBoard[i] = orig; return i }
             tttBoard[i] = orig
         }
-        // 2. חסימה מיידית של השחקן
         for (i in free) {
             val orig = tttBoard[i]; tttBoard[i] = "×"
             if (checkWinner() == "×") { tttBoard[i] = orig; return i }
             tttBoard[i] = orig
         }
-        // 3. חשיבה קדימה (Minimax) ב-82% מהמקרים כדי להיות חכם אך ניתן לניצחון
         if (Random.nextFloat() < 0.82f) {
             var bestScore = Int.MIN_VALUE
             val bestMoves = mutableListOf<Int>()
@@ -255,71 +257,77 @@ object MiniGameEngine {
         activity.currentView?.text = "🚀 ⬅ " + invaderTrack.joinToString("  ")
     }
 
-    // --- משחק 3: מירוץ מכוניות מתמטי לאורך המסך (קוד 5555) ---
+    // --- משחק 3: מירוץ מכוניות מאוזן כמו החללית (קוד 5555) ---
     fun startMathRacer(activity: MainActivity) {
         stopPreviousLoop()
         isActive = true
         currentGame = "RACER"
         carLane = 1
         racerScore = 0
-        for (i in 0 until 5) roadRows[i] = Pair(-1, "")
-        spawnRoadObstacle()
-        activity.memoryIndicator?.text = "🏎️ מירוץ: 4=שמאל, 6=ימין, 5/×=פוצץ מכשול, 8/+=טורבו"
+        for (lane in 0..2) {
+            racerTracks[lane] = MutableList(trackLength) { "." }
+        }
+        // הדגשת כפתורי השליטה במקלדת לנוחות מקסימלית!
+        activity.keypadButtons["8"]?.text = "8⬆️"
+        activity.keypadButtons["2"]?.text = "2⬇️"
+        activity.keypadButtons["5"]?.text = "5💥"
+        activity.keypadButtons["6"]?.text = "6⚡"
+
+        activity.memoryIndicator?.text = "🏎️ 8=למעלה | 2=למטה | 5/×=ירייה | 6/+=טורבו | AC=יציאה"
 
         gameLoop = object : Runnable {
             override fun run() {
                 if (!isActive || currentGame != "RACER") return
-                advanceRoad(activity)
+                advanceRacerTracks(activity)
                 if (!isActive) return
                 renderRacer(activity)
-                val speed = (720L - (racerScore * 12L)).coerceAtLeast(280L)
+                val speed = (750L - (racerScore * 12L)).coerceAtLeast(280L)
                 handler.postDelayed(this, speed)
             }
         }
         renderRacer(activity)
-        handler.postDelayed(gameLoop!!, 720)
+        handler.postDelayed(gameLoop!!, 750)
     }
 
-    private fun spawnRoadObstacle() {
-        if (roadRows[1].first == -1 && Random.nextFloat() < 0.65f) {
-            roadRows[0] = Pair(Random.nextInt(3), if (Random.nextFloat() < 0.72f) "×" else "+")
-        } else roadRows[0] = Pair(-1, "")
-    }
-
-    private fun advanceRoad(activity: MainActivity) {
-        for (i in 4 downTo 1) roadRows[i] = roadRows[i - 1]
-        spawnRoadObstacle()
-        val bottom = roadRows[4]
-        if (bottom.first != -1) {
-            if (bottom.first == carLane) {
-                if (bottom.second == "×") {
-                    activity.shakeScreen()
-                    stopGame(activity, "💥 התנגשת במחסום ×! ניקוד: $racerScore")
-                    return
+    private fun advanceRacerTracks(activity: MainActivity) {
+        // בדיוק כמו החללית: קידום כל 3 הנתיבים צעד אחד שמאלה לעבר המכונית!
+        for (lane in 0..2) {
+            val reachedCar = racerTracks[lane].removeAt(0)
+            if (reachedCar != ".") {
+                if (lane == carLane) {
+                    if (reachedCar == "🚧") {
+                        activity.shakeScreen()
+                        stopGame(activity, "💥 התנגשת במחסום! ניקוד סופי: $racerScore 🏆")
+                        return
+                    } else if (reachedCar == "⭐") {
+                        racerScore += 5
+                    }
                 } else {
-                    racerScore += 5
-                    roadRows[4] = Pair(-1, "")
+                    racerScore += 1
                 }
-            } else racerScore++
+            }
+        }
+        // הוספת מכשול או בונוס חדש בקצה הימני של אחד הנתיבים
+        val recentlySpawned = (0..2).any { racerTracks[it].lastOrNull() != "." }
+        val spawnLane = if (!recentlySpawned && Random.nextFloat() < 0.7f) Random.nextInt(3) else -1
+        for (lane in 0..2) {
+            if (lane == spawnLane) {
+                racerTracks[lane].add(if (Random.nextFloat() < 0.72f) "🚧" else "⭐")
+            } else {
+                racerTracks[lane].add(".")
+            }
         }
     }
 
     private fun renderRacer(activity: MainActivity) {
-        activity.expressionView?.text = "🏆 ניקוד: $racerScore | 4=⬅️ 5/×=💥 8/+=⚡ 6=➡️"
-        val sb = StringBuilder()
-        for (r in 0 until 5) {
-            val (obsLane, obsType) = roadRows[r]
-            val cells = Array(3) { lane ->
-                when {
-                    r == 4 && lane == carLane -> "🏎️"
-                    obsLane == lane -> if (obsType == "×") "🚧" else "⭐"
-                    else -> " · "
-                }
-            }
-            sb.append("║ ").append(cells[0]).append(" │ ").append(cells[1]).append(" │ ").append(cells[2]).append(" ║")
-            if (r < 4) sb.append("\n")
+        activity.expressionView?.text = "ניקוד: $racerScore ⭐ | 8=⬆️ למעלה | 2=⬇️ למטה | 5/×=💥 ירייה"
+        val rows = (0..2).map { lane ->
+            val head = if (lane == carLane) "🏎️ ⬅ " else "      "
+            head + racerTracks[lane].joinToString("   ")
         }
-        activity.currentView?.text = sb.toString()
+        activity.currentView?.gravity = Gravity.START or Gravity.CENTER_VERTICAL
+        activity.currentView?.typeface = Typeface.MONOSPACE
+        activity.currentView?.text = rows.joinToString("\n")
     }
         // --- משחק 4: נטרול פצצה מתמטית (קוד 1010) ---
     fun startBombDefusal(activity: MainActivity) {
@@ -404,14 +412,21 @@ object MiniGameEngine {
             }
             "RACER" -> {
                 when (key) {
-                    "4" -> carLane = (carLane - 1).coerceAtLeast(0)
-                    "6" -> carLane = (carLane + 1).coerceAtMost(2)
-                    "5", "×" -> for (r in 3 downTo 0) if (roadRows[r].first == carLane && roadRows[r].second == "×") {
-                        roadRows[r] = Pair(carLane, "+")
-                        racerScore += 2
-                        break
+                    "8" -> carLane = (carLane - 1).coerceAtLeast(0) // מעבר לנתיב עליון
+                    "2" -> carLane = (carLane + 1).coerceAtMost(2)  // מעבר לנתיב תחתון
+                    "5", "×" -> {
+                        // ירייה קדימה בנתיב של הרכב (מפוצצת את המחסום הקרוב ביותר והופכת אותו לכוכב!)
+                        val targetIdx = racerTracks[carLane].indexOfFirst { it == "🚧" }
+                        if (targetIdx != -1) {
+                            racerTracks[carLane][targetIdx] = "⭐"
+                            racerScore += 2
+                        }
                     }
-                    "8", "+" -> { racerScore++; advanceRoad(activity) }
+                    "6", "+" -> {
+                        // טורבו קדימה
+                        racerScore++
+                        advanceRacerTracks(activity)
+                    }
                 }
                 if (isActive) renderRacer(activity)
                 return true
@@ -447,5 +462,3 @@ object MiniGameEngine {
         gameLoop?.let { handler.removeCallbacks(it) }
     }
 }
-
-    
