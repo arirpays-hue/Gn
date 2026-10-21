@@ -21,7 +21,7 @@ object MiniGameEngine {
     private var gameLoop: Runnable? = null
     private var cooldownTicker: Runnable? = null
 
-    // נגני אודיו למירוץ המכוניות (מעבר הדרגתי מ-loop0 עד loop5)
+    // נגני אודיו למירוץ המכוניות ולאיקס-עיגול
     private var engineLoopPlayer: MediaPlayer? = null
     private var currentEngineStage = 0
     private var sfxPlayer: MediaPlayer? = null
@@ -69,13 +69,58 @@ object MiniGameEngine {
         Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
     }
 
-    // --- מערכת סאונד למירוץ המכוניות: מתחיל מ-loop0 ומתקדם עד loop5 ---
+    // --- מערכת סאונד למירוץ המכוניות ולאיקס-עיגול ---
     private fun findRawResId(activity: MainActivity, candidates: List<String>): Int {
         for (name in candidates) {
             val id = activity.resources.getIdentifier(name, "raw", activity.packageName)
             if (id != 0) return id
         }
         return 0
+    }
+
+    // השמעת צלילי ניצחון והפסד במשחק XO (1337)
+    fun playTttResultSound(activity: MainActivity, isWin: Boolean) {
+        if (!activity.useSound) return
+        val candidates = if (isWin) {
+            listOf("ttt_win", "win", "game_win", "tuomas_data_game_win_471625", "victory", "star", "cheer")
+        } else {
+            listOf("ttt_lose", "lose", "game_over", "universfield_game_over_deep_male_voice_clip_352695", "gameover", "fail", "crash")
+        }
+        val resId = findRawResId(activity, candidates)
+        if (resId != 0) {
+            try {
+                sfxPlayer?.release()
+                sfxPlayer = MediaPlayer.create(activity, resId)?.apply {
+                    setOnCompletionListener { it.release() }
+                    start()
+                }
+                return
+            } catch (_: Exception) {}
+        }
+                // גיבוי סינתטי לצליל ניצחון / הפסד ב-XO אם הקובץ טרם הועלה ל-raw
+        Thread {
+            try {
+                val sampleRate = 22050
+                val notes = if (isWin) {
+                    listOf(523.25 to 130, 659.25 to 130, 783.99 to 150, 1046.50 to 320)
+                } else {
+                    listOf(311.13 to 220, 277.18 to 220, 246.94 to 220, 196.00 to 420)
+                }
+                for ((freq, dur) in notes) {
+                    val numSamples = (dur * sampleRate) / 1000
+                    val buffer = ShortArray(numSamples)
+                    for (i in 0 until numSamples) {
+                        val env = sin((i.toDouble() / numSamples) * PI)
+                        buffer[i] = (sin(2.0 * PI * freq * i / sampleRate) * env * Short.MAX_VALUE * 0.55).toInt().toShort()
+                    }
+                    val track = AudioTrack.Builder()
+                        .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
+                        .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(sampleRate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                        .setBufferSizeInBytes(buffer.size * 2).setTransferMode(AudioTrack.MODE_STATIC).build()
+                    track.write(buffer, 0, buffer.size); track.play(); Thread.sleep(dur.toLong() + 20); track.release()
+                }
+            } catch (_: Exception) {}
+        }.start()
     }
 
     private fun startRacerEngineLoop(activity: MainActivity) {
@@ -95,7 +140,6 @@ object MiniGameEngine {
             return
         }
 
-        // גיבוי אם יש רק קובץ מנוע בודד
         val singleResId = findRawResId(activity, listOf("car_loop", "engine", "race_car", "car_engine", "car", "motor"))
         if (singleResId != 0) {
             try {
@@ -108,7 +152,6 @@ object MiniGameEngine {
             } catch (_: Exception) {}
         }
 
-        // גיבוי סינתטי שמתחיל מ-loop0 ועולה בהילוכים עד loop5 אם הקבצים טרם הועלו ל-raw
         synthEngineRunning = true
         Thread {
             try {
@@ -124,7 +167,7 @@ object MiniGameEngine {
                     .setTransferMode(AudioTrack.MODE_STREAM).build()
                 track.play()
                 while (synthEngineRunning && isActive && currentGame == "RACER") {
-                    val gearStage = (tick / 18).coerceAtMost(5) // עובר מהילוך 0 להילוך 5
+                    val gearStage = (tick / 18).coerceAtMost(5)
                     val baseFreq = 65.0 + (gearStage * 22.0) + (if (tick % 4 < 2) 5.0 else -3.0)
                     tick++
                     for (i in 0 until chunkSamples) {
@@ -148,7 +191,6 @@ object MiniGameEngine {
             engineLoopPlayer = MediaPlayer.create(activity, resId)?.apply {
                 setVolume(0.6f, 0.6f)
                 if (currentEngineStage >= stageResIds.lastIndex) {
-                    // כשהגיע ל-loop5 (השלב האחרון), ממשיך לנגן אותו בלופ רציף!
                     isLooping = true
                 } else {
                     isLooping = false
@@ -175,9 +217,9 @@ object MiniGameEngine {
         private fun playRacerSoundEffect(activity: MainActivity, type: String) {
         if (!activity.useSound) return
         val candidates = when (type) {
-            "SHOOT" -> listOf("shoot", "shot", "laser", "fire", "gun")
+            "SHOOT" -> listOf("shoot", "shot", "universfield_arcade_shot_152053", "arcade_shot", "laser", "fire", "gun")
             "CRASH" -> listOf("crash", "collision", "hit", "explosion", "boom")
-            "STAR"  -> listOf("star", "coin", "bonus", "powerup", "pickup")
+            "STAR"  -> listOf("star", "coin", "mixkit_winning_a_coin_video_game_2069", "winning_a_coin", "bonus", "powerup", "pickup")
             else -> emptyList()
         }
         val resId = findRawResId(activity, candidates)
@@ -191,7 +233,6 @@ object MiniGameEngine {
                 return
             } catch (_: Exception) {}
         }
-        // גיבוי סינתטי חי ל-3 אפקטי הקול (ירייה, התנגשות, כוכב)
         Thread {
             try {
                 val sampleRate = 22050
@@ -212,7 +253,7 @@ object MiniGameEngine {
                             phase += 2.0 * PI * (95.0 * (1.0 - p * 0.5)) / sampleRate
                             (noise * 0.75 + sin(phase) * 0.25) * (1.0 - p)
                         }
-                        else -> { // STAR - צליל פעמון עולה כפול
+                        else -> {
                             val freq = if (p < 0.45) 880.0 else 1318.5
                             phase += 2.0 * PI * freq / sampleRate
                             sin(phase) * sin(p * PI)
@@ -229,7 +270,6 @@ object MiniGameEngine {
         }.start()
     }
 
-    // צליל צפצפת גומי סינתטי למסיבת החיות
     fun playSqueakSound() {
         Thread {
             try {
@@ -435,11 +475,9 @@ object MiniGameEngine {
         currentGame = "RACER"
         carLane = 1
         racerScore = 0
-        lastShotTime = 0L // ירייה ראשונה מוכנה מיד
+        lastShotTime = 0L
         pendingGuardedStarLane = -1
-        for (lane in 0..2) {
-            racerTracks[lane] = MutableList(5) { "." }
-        }
+        for (lane in 0..2) racerTracks[lane] = MutableList(5) { "." }
         savedKeyLabels.clear()
         for (k in listOf("8", "2", "5", "6")) {
             activity.keypadButtons[k]?.let { savedKeyLabels[k] = it.text }
@@ -462,7 +500,6 @@ object MiniGameEngine {
                 handler.postDelayed(this, speed)
             }
         }
-        // טיימר לעדכון חי של מד טעינת הירייה כל 300ms
         cooldownTicker = object : Runnable {
             override fun run() {
                 if (!isActive || currentGame != "RACER") return
@@ -487,7 +524,7 @@ object MiniGameEngine {
                         return
                     } else if (reachedCar == "⭐") {
                         playRacerSoundEffect(activity, "STAR")
-                        racerScore += 10 // כוכב נדיר מעניק +10 נקודות וטוען את הירייה מיד!
+                        racerScore += 10
                         lastShotTime = 0L
                     }
                 } else if (reachedCar == "🚧") {
@@ -495,44 +532,31 @@ object MiniGameEngine {
                 }
             }
         }
-        // אם בצעד הקודם נוצר מחסום שמגן על כוכב – עכשיו הכוכב הנדיר נכנס מיד מאחוריו!
         if (pendingGuardedStarLane in 0..2) {
             val starLane = pendingGuardedStarLane
             pendingGuardedStarLane = -1
-            for (lane in 0..2) {
-                racerTracks[lane].add(0, if (lane == starLane) "⭐" else ".")
-            }
+            for (lane in 0..2) racerTracks[lane].add(0, if (lane == starLane) "⭐" else ".")
             return
         }
-
         val recentlySpawned = (0..2).any { racerTracks[it].firstOrNull() != "." }
         if (!recentlySpawned && Random.nextFloat() < 0.72f) {
             val spawnLane = Random.nextInt(3)
             val roll = Random.nextFloat()
             when {
-                // 11% סיכוי לכוכב מוגן שמסתתר מיד מאחורי מחסום (חייבים לירות במחסום או לעקוף מהר!)
                 roll < 0.11f -> {
                     pendingGuardedStarLane = spawnLane
                     for (lane in 0..2) racerTracks[lane].add(0, if (lane == spawnLane) "🚧" else ".")
                 }
-                // 3% סיכוי בלבד לכוכב חופשי אך מוקף מחסום בנתיב שכן
                 roll < 0.14f -> {
                     val blockerLane = (spawnLane + 1 + Random.nextInt(2)) % 3
                     for (lane in 0..2) {
-                        val sym = when (lane) {
-                            spawnLane -> "⭐"
-                            blockerLane -> "🚧"
-                            else -> "."
-                        }
+                        val sym = when (lane) { spawnLane -> "⭐"; blockerLane -> "🚧"; else -> "." }
                         racerTracks[lane].add(0, sym)
                     }
                 }
-                // 86% מהמקרים: מחסום רגיל (או זוג מחסומים ככל שהניקוד עולה)
                 else -> {
                     val secondBlocker = if (racerScore >= 20 && Random.nextFloat() < 0.28f) (spawnLane + 1 + Random.nextInt(2)) % 3 else -1
-                    for (lane in 0..2) {
-                        racerTracks[lane].add(0, if (lane == spawnLane || lane == secondBlocker) "🚧" else ".")
-                    }
+                    for (lane in 0..2) racerTracks[lane].add(0, if (lane == spawnLane || lane == secondBlocker) "🚧" else ".")
                 }
             }
         } else {
@@ -591,8 +615,7 @@ object MiniGameEngine {
     }
 
     private fun generateBombQuestion(activity: MainActivity) {
-        val a = Random.nextInt(2, 12)
-        val b = Random.nextInt(2, 10)
+        val a = Random.nextInt(2, 12); val b = Random.nextInt(2, 10)
         val ops = listOf("+", "−", "×", "÷")
         expectedOp = ops.random()
         val displayEq = when (expectedOp) {
@@ -605,14 +628,9 @@ object MiniGameEngine {
         activity.currentView?.text = displayEq
     }
 
-    // --- קליטת לחיצות מהמקלדת בזמן משחק ---
     fun onKeyPress(activity: MainActivity, key: String): Boolean {
         if (!isActive) return false
-        if (key == "AC") {
-            stopGame(activity)
-            return true
-        }
-
+        if (key == "AC") { stopGame(activity); return true }
         when (currentGame) {
             "ANIMALS" -> {
                 playSqueakSound()
@@ -655,20 +673,13 @@ object MiniGameEngine {
                             lastShotTime = System.currentTimeMillis()
                             playRacerSoundEffect(activity, "SHOOT")
                             val idx = racerTracks[carLane].indexOfLast { it == "🚧" }
-                            if (idx != -1) {
-                                // המחסום מתפוצץ ומפנה את הנתיב (ולא הופך אוטומטית לכוכב, כך שכוכבים נשארים נדירים!)
-                                racerTracks[carLane][idx] = "."
-                                racerScore += 2
-                            }
+                            if (idx != -1) { racerTracks[carLane][idx] = "."; racerScore += 2 }
                         } else {
                             val sec = ceil(rem / 1000.0).toInt()
                             Toast.makeText(activity, "⏳ הירייה בטעינה! עוד $sec שניות", Toast.LENGTH_SHORT).show()
                         }
                     }
-                    key == "6" || key == "6⚡" || key == "+" -> {
-                        racerScore++
-                        advanceRacerTracks(activity)
-                    }
+                    key == "6" || key == "6⚡" || key == "+" -> { racerScore++; advanceRacerTracks(activity) }
                 }
                 if (isActive) renderRacer(activity)
                 return true
@@ -676,12 +687,9 @@ object MiniGameEngine {
             "BOMB" -> {
                 if (key in listOf("+", "−", "×", "÷")) {
                     if (key == expectedOp) {
-                        bombScore++
-                        bombTimeLeft = (bombTimeLeft + 3).coerceAtMost(20)
-                        generateBombQuestion(activity)
+                        bombScore++; bombTimeLeft = (bombTimeLeft + 3).coerceAtMost(20); generateBombQuestion(activity)
                     } else {
-                        bombTimeLeft = (bombTimeLeft - 3).coerceAtLeast(1)
-                        activity.shakeScreen()
+                        bombTimeLeft = (bombTimeLeft - 3).coerceAtLeast(1); activity.shakeScreen()
                     }
                 }
                 return true
@@ -691,6 +699,10 @@ object MiniGameEngine {
     }
 
     private fun finishTicTacToe(activity: MainActivity, winner: String) {
+        when (winner) {
+            "×" -> playTttResultSound(activity, true)
+            "0" -> playTttResultSound(activity, false)
+        }
         val msg = when (winner) {
             "×" -> "🏆 ניצחת! × ניצח את 0! (AC ליציאה)"
             "0" -> "🤖 המחשב (0) ניצח! נסה שוב"
