@@ -1,6 +1,5 @@
 package com.example.calculator
 
-import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.Drawable
@@ -8,101 +7,146 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.RippleDrawable
 import android.os.Build
-import android.util.TypedValue
 import android.view.View
 
 object IosGlassTheme {
 
-    // מסיר אימוג'ים משמות הקטגוריות במצב עיצוב iOS של אפל
+    // מסיר אימוג'ים משמות המחשבונים כשהעיצוב של אפל (iOS) פעיל
     fun formatCategoryTitle(rawTitle: String, isIosMode: Boolean): String {
         if (!isIosMode) return rawTitle
-        return rawTitle.substringAfter(" ").trim()
+        val stripped = rawTitle.substringAfter(" ").trim()
+        return if (stripped.isNotEmpty()) stripped else rawTitle
     }
 
-    private fun dp(context: Context, v: Float): Int =
-        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, context.resources.displayMetrics).toInt()
+    // זכוכית חלבית תלת-ממדית (3D Frosted Glass) לכרטיס התצוגה ולתוצאות
+    fun createFrostedCardDrawable(activity: MainActivity, bgColor: Int, primaryColor: Int, radiusDp: Float = 28f): Drawable {
+        val r = activity.dp(radiusDp).toFloat()
 
-    // כפתור זכוכית חלבית תלת-ממדית (Apple iOS 3D Frosted Glass)
-    fun create3DGlassButtonDrawable(
-        context: Context,
-        baseColor: Int,
-        primaryColor: Int,
-        cornerDp: Float,
-        isAccent: Boolean = false,
-        isDanger: Boolean = false,
-        isOperator: Boolean = false
-    ): Drawable {
-        val radius = dp(context, cornerDp).toFloat()
-
-        // 1. שכבת צל תחתונה ליצירת עומק תלת-ממדי (3D Depth Rim)
-        val shadowLayer = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = radius
-            setColor(Color.argb(135, 0, 0, 0))
-        }
-
-        // 2. גוף הזכוכית החלבית השקופה למחצה (Frosted Translucent Body)
-        val topTint = when {
-            isDanger -> Color.argb(215, 255, 69, 58)
-            isAccent -> Color.argb(225, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))
-            isOperator -> Color.argb(155, (Color.red(primaryColor) + 90).coerceAtMost(255), (Color.green(primaryColor) + 90).coerceAtMost(255), (Color.blue(primaryColor) + 90).coerceAtMost(255))
-            else -> Color.argb(95, (Color.red(baseColor) + 95).coerceAtMost(255), (Color.green(baseColor) + 100).coerceAtMost(255), (Color.blue(baseColor) + 115).coerceAtMost(255))
-        }
-        val bottomTint = when {
-            isDanger -> Color.argb(180, 190, 30, 25)
-            isAccent -> Color.argb(185, (Color.red(primaryColor) * 0.72).toInt(), (Color.green(primaryColor) * 0.72).toInt(), (Color.blue(primaryColor) * 0.72).toInt())
-            isOperator -> Color.argb(110, (Color.red(primaryColor) * 0.5).toInt(), (Color.green(primaryColor) * 0.5).toInt(), (Color.blue(primaryColor) * 0.5).toInt())
-            else -> Color.argb(60, (Color.red(baseColor) + 40).coerceAtMost(255), (Color.green(baseColor) + 45).coerceAtMost(255), (Color.blue(baseColor) + 55).coerceAtMost(255))
-        }
-        val frostedBody = GradientDrawable(
-            GradientDrawable.Orientation.TL_BR,
-            intArrayOf(topTint, bottomTint)
-        ).apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = radius
-            setStroke(dp(context, 1.3f), Color.argb(135, 255, 255, 255))
-        }
-
-        // 3. הברקת זכוכית עליונה (Top 3D Specular Glass Highlight)
-        val glossHighlight = GradientDrawable(
+        // שכבה 1: צל תחתון עדין ליצירת ריחוף תלת-ממדי
+        val shadowLayer = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(Color.argb(115, 255, 255, 255), Color.argb(0, 255, 255, 255))
-        ).apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadii = floatArrayOf(radius, radius, radius, radius, radius * 0.35f, radius * 0.35f, radius * 0.35f, radius * 0.35f)
-        }
-
-        val layers = LayerDrawable(arrayOf(shadowLayer, frostedBody, glossHighlight)).apply {
-            setLayerInset(0, dp(context, 1f), dp(context, 3f), dp(context, 1f), 0)
-            setLayerInset(1, 0, 0, 0, dp(context, 2.5f))
-            setLayerInset(2, dp(context, 1.5f), dp(context, 1.5f), dp(context, 1.5f), dp(context, 18f))
-        }
-        return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#55FFFFFF")), layers, null)
-    }
-
-    // כרטיס תצוגה ותיבות קלט בזכוכית חלבית תלת-ממדית
-    fun create3DGlassCardDrawable(context: Context, bgColor: Int, primaryColor: Int, cornerDp: Float): Drawable {
-        val radius = dp(context, cornerDp).toFloat()
-        val glassSurface = GradientDrawable(
-            GradientDrawable.Orientation.TL_BR,
             intArrayOf(
-                Color.argb(120, (Color.red(bgColor) + 85).coerceAtMost(255), (Color.green(bgColor) + 90).coerceAtMost(255), (Color.blue(bgColor) + 110).coerceAtMost(255)),
-                Color.argb(75, (Color.red(bgColor) + 35).coerceAtMost(255), (Color.green(bgColor) + 40).coerceAtMost(255), (Color.blue(bgColor) + 55).coerceAtMost(255))
+                Color.argb(30, 0, 0, 0),
+                Color.argb(120, 0, 0, 0)
             )
+        ).apply { cornerRadius = r }
+
+        // שכבה 2: גוף הזכוכית החלבית (Frosted Translucent Body)
+        val glassBase = Utils.lightenColor(bgColor, 0.16f)
+        val glassTop = Color.argb(
+            215,
+            (Color.red(glassBase) + 38).coerceAtMost(255),
+            (Color.green(glassBase) + 40).coerceAtMost(255),
+            (Color.blue(glassBase) + 48).coerceAtMost(255)
+        )
+        val glassBottom = Color.argb(
+            180,
+            Color.red(glassBase),
+            Color.green(glassBase),
+            Color.blue(glassBase)
+        )
+        val bodyLayer = GradientDrawable(
+            GradientDrawable.Orientation.TL_BR,
+            intArrayOf(glassTop, glassBottom)
         ).apply {
-            cornerRadius = radius
-            setStroke(dp(context, 1.6f), Color.argb(145, 255, 255, 255))
+            cornerRadius = r
+            setStroke(
+                activity.dp(1.4f),
+                Color.argb(135, 255, 255, 255)
+            )
         }
-        val innerGlow = GradientDrawable(
+
+        // שכבה 3: השתקפות אור עליונה (3D Specular Glass Sheen)
+        val sheenLayer = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
-            intArrayOf(Color.argb(75, 255, 255, 255), Color.argb(15, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
-        ).apply { cornerRadius = radius }
-        return LayerDrawable(arrayOf(glassSurface, innerGlow))
+            intArrayOf(
+                Color.argb(95, 255, 255, 255),
+                Color.argb(22, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)),
+                Color.TRANSPARENT
+            )
+        ).apply { cornerRadius = r }
+
+        return LayerDrawable(arrayOf(shadowLayer, bodyLayer, sheenLayer)).apply {
+            setLayerInset(0, 0, activity.dp(3f), 0, 0)
+            setLayerInset(1, 0, 0, 0, activity.dp(2f))
+            setLayerInset(2, activity.dp(1.5f), activity.dp(1.5f), activity.dp(1.5f), activity.dp(12f))
+        }
+    }
+        // כפתור זכוכית חלבית תלת-ממדית של iOS למקלדת המחשבון
+    fun createFrostedKeyButtonBackground(
+        activity: MainActivity,
+        symbol: String,
+        bgColor: Int,
+        primaryColor: Int,
+        cornerDp: Float
+    ): Drawable {
+        val r = activity.dp(cornerDp).toFloat()
+        val isMem = symbol in listOf("MC", "MR", "M+", "M-")
+        val isAccentOp = symbol in listOf("÷", "×", "−", "+", "=")
+        val isTopFunc = symbol in listOf("AC", "⌫", "%")
+
+        val baseColor = when {
+            symbol == "=" -> primaryColor
+            symbol == "AC" -> Color.parseColor("#FF453A") // iOS System Red
+            isAccentOp -> Color.argb(215, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))
+            isTopFunc || isMem -> Utils.lightenColor(bgColor, 0.28f)
+            else -> Utils.lightenColor(bgColor, 0.17f)
+        }
+
+        val shadow3D = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = r
+            setColor(Color.argb(115, 0, 0, 0))
+        }
+
+        val topFrost = Color.argb(
+            235,
+            (Color.red(baseColor) + 45).coerceAtMost(255),
+            (Color.green(baseColor) + 45).coerceAtMost(255),
+            (Color.blue(baseColor) + 50).coerceAtMost(255)
+        )
+        val bottomFrost = Color.argb(
+            200,
+            Color.red(baseColor),
+            Color.green(baseColor),
+            Color.blue(baseColor)
+        )
+
+        val glassSurface = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(topFrost, bottomFrost)
+        ).apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = r
+            setStroke(activity.dp(1.2f), Color.argb(130, 255, 255, 255))
+        }
+
+        val highlightGloss = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(Color.argb(110, 255, 255, 255), Color.TRANSPARENT)
+        ).apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = r
+        }
+
+        val layered = LayerDrawable(arrayOf(shadow3D, glassSurface, highlightGloss)).apply {
+            setLayerInset(0, 0, activity.dp(3f), 0, 0)
+            setLayerInset(1, 0, 0, 0, activity.dp(2.5f))
+            setLayerInset(2, activity.dp(1.5f), activity.dp(1.5f), activity.dp(1.5f), activity.dp(14f))
+        }
+
+        return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#55FFFFFF")), layered, null)
     }
 
-    fun apply3DElevation(view: View, context: Context, elevationDp: Float = 8f) {
+    // כפתור פעולה / שדה קלט בזכוכית חלבית של iOS
+    fun createFrostedActionDrawable(activity: MainActivity, bgColor: Int, primaryColor: Int, isPrimary: Boolean, cornerDp: Float): Drawable {
+        val sym = if (isPrimary) "=" else "0"
+        return createFrostedKeyButtonBackground(activity, sym, bgColor, primaryColor, cornerDp)
+    }
+
+    fun apply3DElevation(view: View, activity: MainActivity, isIosMode: Boolean, dpElev: Float = 8f) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            view.elevation = dp(context, elevationDp).toFloat()
+            view.elevation = if (isIosMode) activity.dp(dpElev).toFloat() else 0f
         }
     }
 }
