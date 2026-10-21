@@ -21,8 +21,9 @@ object MiniGameEngine {
     private var gameLoop: Runnable? = null
     private var cooldownTicker: Runnable? = null
 
-    // נגני אודיו למירוץ המכוניות
+    // נגני אודיו למירוץ המכוניות (מעבר הדרגתי מ-loop0 עד loop5)
     private var engineLoopPlayer: MediaPlayer? = null
+    private var currentEngineStage = 0
     private var sfxPlayer: MediaPlayer? = null
     @Volatile private var synthEngineRunning = false
 
@@ -68,7 +69,7 @@ object MiniGameEngine {
         Toast.makeText(activity, message, Toast.LENGTH_SHORT).show()
     }
 
-    // --- מערכת סאונד למירוץ המכוניות (4 צלילים: מנוע בלופ, ירייה, התנגשות, כוכב) ---
+    // --- מערכת סאונד למירוץ המכוניות: מתחיל מ-loop0 ומתקדם עד loop5 ---
     private fun findRawResId(activity: MainActivity, candidates: List<String>): Int {
         for (name in candidates) {
             val id = activity.resources.getIdentifier(name, "raw", activity.packageName)
@@ -80,10 +81,25 @@ object MiniGameEngine {
     private fun startRacerEngineLoop(activity: MainActivity) {
         stopRacerAudio()
         if (!activity.useSound) return
-        val resId = findRawResId(activity, listOf("car_loop", "engine", "race_car", "car_engine", "car", "motor"))
-        if (resId != 0) {
+
+        // איסוף קובצי המנוע מ-loop0 (או loop_0) ועד loop5 (או loop_5)
+        val stageResIds = mutableListOf<Int>()
+        for (i in 0..5) {
+            val id = findRawResId(activity, listOf("loop$i", "loop_$i", "car_loop$i", "engine$i"))
+            if (id != 0) stageResIds.add(id)
+        }
+
+        if (stageResIds.isNotEmpty()) {
+            currentEngineStage = 0
+            playEngineStage(activity, stageResIds)
+            return
+        }
+
+        // גיבוי אם יש רק קובץ מנוע בודד
+        val singleResId = findRawResId(activity, listOf("car_loop", "engine", "race_car", "car_engine", "car", "motor"))
+        if (singleResId != 0) {
             try {
-                engineLoopPlayer = MediaPlayer.create(activity, resId)?.apply {
+                engineLoopPlayer = MediaPlayer.create(activity, singleResId)?.apply {
                     isLooping = true
                     setVolume(0.55f, 0.55f)
                     start()
@@ -91,7 +107,8 @@ object MiniGameEngine {
                 return
             } catch (_: Exception) {}
         }
-        // גיבוי סינתטי ללופ מנוע מכונית מרוץ אם הקובץ לא נמצא ב-raw
+
+        // גיבוי סינתטי שמתחיל מ-loop0 ועולה בהילוכים עד loop5 אם הקבצים טרם הועלו ל-raw
         synthEngineRunning = true
         Thread {
             try {
@@ -99,7 +116,7 @@ object MiniGameEngine {
                 val chunkSamples = sampleRate / 10
                 val buffer = ShortArray(chunkSamples)
                 var phase = 0.0
-                var revTick = 0
+                var tick = 0
                 val track = AudioTrack.Builder()
                     .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
                     .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(sampleRate).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
@@ -107,8 +124,9 @@ object MiniGameEngine {
                     .setTransferMode(AudioTrack.MODE_STREAM).build()
                 track.play()
                 while (synthEngineRunning && isActive && currentGame == "RACER") {
-                    val baseFreq = 78.0 + (racerScore.coerceAtMost(40) * 1.1) + (if (revTick % 4 < 2) 6.0 else -4.0)
-                    revTick++
+                    val gearStage = (tick / 18).coerceAtMost(5) // עובר מהילוך 0 להילוך 5
+                    val baseFreq = 65.0 + (gearStage * 22.0) + (if (tick % 4 < 2) 5.0 else -3.0)
+                    tick++
                     for (i in 0 until chunkSamples) {
                         phase += 2.0 * PI * baseFreq / sampleRate
                         val rumble = sin(phase) * 0.55 + sin(phase * 2.0) * 0.30 + sin(phase * 3.0) * 0.15
@@ -120,6 +138,30 @@ object MiniGameEngine {
                 track.release()
             } catch (_: Exception) {}
         }.start()
+    }
+
+    private fun playEngineStage(activity: MainActivity, stageResIds: List<Int>) {
+        if (!isActive || currentGame != "RACER" || !activity.useSound) return
+        val resId = stageResIds[currentEngineStage.coerceIn(0, stageResIds.lastIndex)]
+        try {
+            engineLoopPlayer?.release()
+            engineLoopPlayer = MediaPlayer.create(activity, resId)?.apply {
+                setVolume(0.6f, 0.6f)
+                if (currentEngineStage >= stageResIds.lastIndex) {
+                    // כשהגיע ל-loop5 (השלב האחרון), ממשיך לנגן אותו בלופ רציף!
+                    isLooping = true
+                } else {
+                    isLooping = false
+                    setOnCompletionListener {
+                        if (isActive && currentGame == "RACER") {
+                            currentEngineStage = (currentEngineStage + 1).coerceAtMost(stageResIds.lastIndex)
+                            playEngineStage(activity, stageResIds)
+                        }
+                    }
+                }
+                start()
+            }
+        } catch (_: Exception) {}
     }
 
     private fun stopRacerAudio() {
