@@ -169,6 +169,120 @@ fun MainActivity.checkEasterEggs(input: String): Boolean {
             if (useHaptic) mainContent?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             return true
         }
+                // --- 🔥 ביצי פסחא של ממים ברשת (קצרים וארוכים) ---
+        // 🐸 מם 420: Doge / Crypto Moon
+        "420" -> {
+            primaryColor = Color.parseColor("#00E676")
+            bgColor = Color.parseColor("#0B1F13")
+            savePreferences()
+            applyTheme()
+            expressionView?.text = "Much Calculator, Very Math 🐶"
+            currentInput = "To the Moon! 🚀"
+            currentView?.text = currentInput
+            justCalculated = true
+            Toast.makeText(this, "🐕 Wow! Such Profit!", Toast.LENGTH_SHORT).show()
+            return true
+        }
+
+        // 🗿 מם 69: Nice
+        "69" -> {
+            expressionView?.text = "🗿 Moai Approved"
+            currentInput = "Nice. 🗿"
+            currentView?.text = currentInput
+            justCalculated = true
+            val orig = bgColor
+            thread {
+                val colors = listOf(Color.parseColor("#7B1FA2"), Color.parseColor("#E040FB"))
+                for (i in 1..8) { Handler(Looper.getMainLooper()).post { mainContent?.setBackgroundColor(colors[i % 2]) }; Thread.sleep(110) }
+                Handler(Looper.getMainLooper()).post { mainContent?.setBackgroundColor(orig) }
+            }
+            return true
+        }
+
+        // 💀 מם 404: Error / Task Failed Successfully
+        "404" -> {
+            expressionView?.text = "ERROR 404: Math Not Found"
+            currentInput = "Task Failed Successfully 💀"
+            currentView?.text = currentInput
+            justCalculated = true
+            shakeScreen()
+            return true
+        }
+
+        // 📱 מם 3310: נוקיה המיתולוגי הבלתי שביר
+        "3310" -> {
+            primaryColor = Color.parseColor("#9CCC65")
+            bgColor = Color.parseColor("#1B2613")
+            savePreferences()
+            applyTheme()
+            expressionView?.text = "NOKIA 3310 MODE 📱"
+            currentInput = "Indestructible! 🔨"
+            currentView?.text = currentInput
+            justCalculated = true
+            shakeScreen()
+            Toast.makeText(this, "המכשיר שלך כעת חסין מפני פגיעת אסטרואיד ☄️", Toast.LENGTH_LONG).show()
+            return true
+        }
+
+        // 🗿 הקוד הארוך 6942069: Gigachad / Absolute Legend
+        "6942069" -> {
+            primaryColor = Color.parseColor("#FFD700")
+            bgColor = Color.parseColor("#141105")
+            savePreferences()
+            applyTheme()
+            expressionView?.text = "👑 GIGACHAD DETECTED 👑"
+            currentInput = "🗿 Absolute Legend"
+            currentView?.text = currentInput
+            justCalculated = true
+            shakeScreen()
+            MiniGameEngine.playTttResultSound(this, true)
+            Toast.makeText(this, "🗿 השגת מעמד של אגדה מוחלטת!", Toast.LENGTH_LONG).show()
+            return true
+        }
+
+        // 🦝 הקוד הארוך 8008135: Calculator Spelling הקלאסי
+        "8008135" -> {
+            justCalculated = true
+            expressionView?.text = "הפוך את המחשבון כמו בכיתה ו' 🙃"
+            currentInput = "BOOBIES 😎"
+            currentView?.text = currentInput
+            MiniGameEngine.playSqueakSound()
+            Toast.makeText(this, "החזרת אותנו לכיתה ו'! 😂", Toast.LENGTH_LONG).show()
+            val orig = bgColor
+            thread {
+                val colors = listOf(Color.MAGENTA, Color.CYAN, Color.YELLOW)
+                for (i in 1..10) { Handler(Looper.getMainLooper()).post { mainContent?.setBackgroundColor(colors[i % 3]) }; Thread.sleep(100) }
+                Handler(Looper.getMainLooper()).post { mainContent?.setBackgroundColor(orig) }
+            }
+            return true
+        }
+
+        // 🤡 הקוד הארוך 404404404: Skill Issue
+        "404404404" -> {
+            justCalculated = true
+            expressionView?.text = "CRITICAL SYSTEM BRUH MOMENT"
+            currentInput = "Skill Issue 💀"
+            currentView?.text = currentInput
+            shakeScreen()
+            MiniGameEngine.playTttResultSound(this, false)
+            historyList.add(0, "404404404 = Skill Issue 💀")
+            savePreferences()
+            return true
+        }
+
+        // 🚀 הקוד הארוך 13371337: Hacker / Elite Pro NASA
+        "13371337" -> {
+            primaryColor = Color.parseColor("#00FF41")
+            bgColor = Color.parseColor("#000000")
+            savePreferences()
+            applyTheme()
+            justCalculated = true
+            expressionView?.text = "ROOT@MAINFRAME:~# ./hack_nasa.sh"
+            currentInput = "> ACCESS GRANTED 010101 💻"
+            currentView?.text = currentInput
+            Toast.makeText(this, "🕶️ אתה בפנים! פורץ ללוויין של נאס״א...", Toast.LENGTH_LONG).show()
+            return true
+        }
     }
     return false
 }
