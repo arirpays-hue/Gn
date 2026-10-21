@@ -1,3 +1,4 @@
+
 package com.example.calculator
 
 import android.app.Activity
@@ -70,7 +71,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     var useHaptic = true; var useSound = true; var useAnimations = true; var keepScreenOn = false; var soundType = 0
     var isRightHanded = true
-    var isIosGlassMode = false // מצב עיצוב iOS 26 Liquid Glass ללא אימוג'ים
+    var isIosGlassMode = false
     var settingsScrollY = 0
     var currentSettingsScroll: ScrollView? = null
     var calcPrecision = 8; var buttonCornerStyle = 24f
@@ -99,7 +100,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "💵 מטבעות לייב", "🔥 מחשבון BMR", "➗ משוואות ריבועיות", "⅟ מחשבון שברים",
         "📈 ריבית דריבית", "🚀 המרת מהירות", "⚙️ הגדרות"
     )
-        override fun onCreate(savedInstanceState: Bundle?) {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         prefs = getSharedPreferences("CalcProPrefs", Context.MODE_PRIVATE); loadPreferences()
         tts = TextToSpeech(this, this)
@@ -186,7 +188,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerScroll.translationX = if (isRightHanded) dp(280f).toFloat() else -dp(280f).toFloat()
         }
     }
-        fun fetchAndCacheCurrencies(onComplete: ((Boolean) -> Unit)? = null) {
+
+    fun fetchAndCacheCurrencies(onComplete: ((Boolean) -> Unit)? = null) {
         val savedJson = prefs?.getString("cachedRatesJson", null)
         if (savedJson != null) {
             try {
@@ -283,7 +286,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         updateHandednessLayout(); updateDrawerSelection(); switchTab(currentTabIndex)
     }
-        private fun openDrawer() {
+
+    private fun openDrawer() {
         updateHandednessLayout()
         if (isIosGlassMode) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
         dimView.visibility = View.VISIBLE; dimView.animate().alpha(1f).setDuration(250).start()
@@ -413,7 +417,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             view.animate().alpha(1f).translationY(0f).setDuration(260).setInterpolator(DecelerateInterpolator()).start()
         }
     }
-        var currentInput = ""; var justCalculated = false
+
+    var currentInput = ""; var justCalculated = false
     var expressionView: TextView? = null; var currentView: TextView? = null; var memoryIndicator: TextView? = null
 
     private fun createBasicCalculator(): View {
@@ -544,6 +549,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         root.addView(keypad, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if(isGrid5x7) 0.72f else 0.68f)); return root
     }
+
     private fun createAnimatedButton(symbol: String, isSmall: Boolean): TextView {
         val isMem = symbol in listOf("MC", "MR", "M+", "M-")
         val isOp = symbol in listOf("÷", "×", "−", "+", "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e", "(", ")")
@@ -596,6 +602,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
     }
+
     private fun onEquationButtonClick(s: String) {
         if (MiniGameEngine.isActive && MiniGameEngine.onKeyPress(this, s)) return
         if (justCalculated && s !in listOf("÷", "×", "−", "+", "^", "%")) { currentInput = ""; justCalculated = false }
@@ -761,7 +768,21 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             cb("${Utils.formatResult(res, calcPrecision)} ${t.substringBefore(" ")}", "יחס: 1 ${f.substringBefore(" ")} = ${Utils.formatResult(unitRate, 6)} ${t.substringBefore(" ")}")
         }
     }
-      fun createTempCalculator(): View {
+
+    fun createWeightCalculator(): View {
+        val units = mapOf(
+            "מיליגרם (mg)" to 1e-6, "גרם (g)" to 0.001, "קילוגרם (kg)" to 1.0, "טון מטרי (t)" to 1000.0,
+            "אונקיה (oz)" to 0.02834952, "פאונד (lbs)" to 0.45359237, "סטון (st)" to 6.350293,
+            "קראט (ct)" to 0.0002, "גריין (gr)" to 0.0000647989, "טון אמריקאי (US ton)" to 907.18474, "טון בריטי (UK ton)" to 1016.0469
+        )
+        return createUniversalConverter("בחר יחידת משקל", { units.keys.toList() }, { fromWeight }, { toWeight }, { f, t -> fromWeight = f; toWeight = t; savePreferences() }) { v, f, t, cb ->
+            val fFactor = units[f] ?: 1.0; val tFactor = units[t] ?: 1.0
+            val res = v * fFactor / tFactor; val unitRate = fFactor / tFactor
+            cb("${Utils.formatResult(res, calcPrecision)} ${t.substringBefore(" ")}", "יחס: 1 ${f.substringBefore(" ")} = ${Utils.formatResult(unitRate, 6)} ${t.substringBefore(" ")}")
+        }
+    }
+
+    fun createTempCalculator(): View {
         val units = listOf("צלזיוס (°C)", "פרנהייט (°F)", "קלווין (K)", "רנקין (°R)", "דליל (°De)", "ניוטון (°N)", "ראומיר (°Ré)", "רומר (°Rø)")
         fun toCelsius(v: Double, u: String): Double = when (u) {
             "פרנהייט (°F)" -> (v - 32.0) * 5.0 / 9.0
@@ -851,7 +872,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         try { startActivityForResult(intent, VOICE_REQUEST_CODE) }
         catch (e: Exception) { Toast.makeText(this, "זיהוי קולי לא נתמך במכשיר זה", Toast.LENGTH_SHORT).show() }
     }
-      override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == VOICE_REQUEST_CODE && resultCode == RESULT_OK) {
             val matches = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
@@ -883,3 +905,4 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 }
+ 
