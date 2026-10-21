@@ -112,13 +112,13 @@ fun MainActivity.checkEasterEggs(input: String): Boolean {
             shakeScreen()
             
             // השמעת הסאונד (השם חייב להיות באותיות קטנות באנדרואיד)
-            val resId = resources.getIdentifier("fahhh_kcgaxfs", "raw", packageName)
+            val resId = resources.getIdentifier("fbiopenupsfx", "raw", packageName)
             if (resId != 0) {
                 activeMediaPlayer?.release()
                 activeMediaPlayer = MediaPlayer.create(this, resId)
                 activeMediaPlayer?.start()
             } else {
-                Toast.makeText(this, "⚠️ קובץ הסאונד חסר! ודא ששינית את שמו ל-fahhh_kcgaxfs.mp3", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "⚠️ קובץ הסאונד חסר! ודא ששינית את שמו ל-fbiopenupsfx.mp3", Toast.LENGTH_LONG).show()
             }
 
             thread {
