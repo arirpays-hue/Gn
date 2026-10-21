@@ -70,6 +70,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     var useHaptic = true; var useSound = true; var useAnimations = true; var keepScreenOn = false; var soundType = 0
     var isRightHanded = true
+    var isIosGlassMode = false // מצב עיצוב זכוכית חלבית תלת-ממד של iOS ללא אימוג'ים
     var settingsScrollY = 0
     var currentSettingsScroll: ScrollView? = null
     var calcPrecision = 8; var buttonCornerStyle = 24f
@@ -85,11 +86,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     val cachedRates = mutableMapOf<String, Double>()
 
-    var allCurrencies = mutableListOf(
-        "דולר אמריקאי (ארה״ב) - USD", "שקל חדש (ישראל) - ILS", "אירו (האיחוד האירופי) - EUR",
-        "לירה שטרלינג (בריטניה) - GBP", "ין יפני (יפן) - JPY", "דולר קנדי (קנדה) - CAD",
-        "דולר אוסטרלי (אוסטרליה) - AUD", "פרנק שווייצרי (שווייץ) - CHF"
-    )
+    var allCurrencies = mutableMapOf<String, Double>().let {
+        mutableListOf(
+            "דולר אמריקאי (ארה״ב) - USD", "שקל חדש (ישראל) - ILS", "אירו (האיחוד האירופי) - EUR",
+            "לירה שטרלינג (בריטניה) - GBP", "ין יפני (יפן) - JPY", "דולר קנדי (קנדה) - CAD",
+            "דולר אוסטרלי (אוסטרליה) - AUD", "פרנק שווייצרי (שווייץ) - CHF"
+        )
+    }
 
     private val categories = listOf(
         "🧮 מחשבון רגיל", "🔬 מחשבון מדעי", "🧾 מחשבון מע״מ", "🏦 מחשבון הלוואה",
@@ -142,7 +145,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         drawerMenu?.addView(appLogo)
 
         for ((index, title) in categories.withIndex()) {
-            val item = TextView(this).apply { text = title; textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.RIGHT; setPadding(dp(24f), dp(16f), dp(24f), dp(16f)); setOnClickListener { feedback(it); settingsScrollY = 0; switchTab(index); closeDrawer() } }
+            val item = TextView(this).apply { text = IosGlassTheme.cleanCategoryTitle(title, isIosGlassMode); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.RIGHT; setPadding(dp(24f), dp(16f), dp(24f), dp(16f)); setOnClickListener { feedback(it); settingsScrollY = 0; switchTab(index); closeDrawer() } }
             drawerItemsViews.add(item); drawerMenu?.addView(item)
         }
 
@@ -234,6 +237,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         useHaptic = prefs?.getBoolean("useHaptic", true) ?: true; useSound = prefs?.getBoolean("useSound", true) ?: true; useAnimations = prefs?.getBoolean("useAnimations", true) ?: true
         keepScreenOn = prefs?.getBoolean("keepScreenOn", false) ?: false; soundType = prefs?.getInt("soundType", 0) ?: 0
         isRightHanded = prefs?.getBoolean("isRightHanded", true) ?: true
+        isIosGlassMode = prefs?.getBoolean("isIosGlassMode", false) ?: false
         calcPrecision = prefs?.getInt("calcPrecision", 8) ?: 8; buttonCornerStyle = prefs?.getFloat("buttonCornerStyle", 24f) ?: 24f
         primaryColor = prefs?.getInt("primaryColor", Color.parseColor("#64B5F6")) ?: Color.parseColor("#64B5F6"); bgColor = prefs?.getInt("bgColor", Color.parseColor("#08090C")) ?: Color.parseColor("#08090C")
         memoryValue = Double.fromBits(prefs?.getLong("memoryValue", 0L) ?: 0L); val savedHist = prefs?.getString("history", "") ?: ""
@@ -246,10 +250,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         historyList.clear(); if (savedHist.isNotEmpty()) historyList.addAll(savedHist.split("||")); updateKeepScreenOn()
     }
 
-    fun savePreferences() { prefs?.edit()?.putBoolean("useHaptic", useHaptic)?.putBoolean("useSound", useSound)?.putBoolean("useAnimations", useAnimations)?.putBoolean("keepScreenOn", keepScreenOn)?.putBoolean("isRightHanded", isRightHanded)?.putInt("soundType", soundType)?.putInt("calcPrecision", calcPrecision)?.putFloat("buttonCornerStyle", buttonCornerStyle)?.putInt("primaryColor", primaryColor)?.putInt("bgColor", bgColor)?.putLong("memoryValue", memoryValue.toRawBits())?.putString("fromCurrency", fromCurrency)?.putString("toCurrency", toCurrency)?.putString("fromDist", fromDist)?.putString("toDist", toDist)?.putString("fromWeight", fromWeight)?.putString("toWeight", toWeight)?.putString("fromTemp", fromTemp)?.putString("toTemp", toTemp)?.putString("fromSpeed", fromSpeed)?.putString("toSpeed", toSpeed)?.putString("history", historyList.take(30).joinToString("||"))?.apply() }
+    fun savePreferences() { prefs?.edit()?.putBoolean("useHaptic", useHaptic)?.putBoolean("useSound", useSound)?.putBoolean("useAnimations", useAnimations)?.putBoolean("keepScreenOn", keepScreenOn)?.putBoolean("isRightHanded", isRightHanded)?.putBoolean("isIosGlassMode", isIosGlassMode)?.putInt("soundType", soundType)?.putInt("calcPrecision", calcPrecision)?.putFloat("buttonCornerStyle", buttonCornerStyle)?.putInt("primaryColor", primaryColor)?.putInt("bgColor", bgColor)?.putLong("memoryValue", memoryValue.toRawBits())?.putString("fromCurrency", fromCurrency)?.putString("toCurrency", toCurrency)?.putString("fromDist", fromDist)?.putString("toDist", toDist)?.putString("fromWeight", fromWeight)?.putString("toWeight", toWeight)?.putString("fromTemp", fromTemp)?.putString("toTemp", toTemp)?.putString("fromSpeed", fromSpeed)?.putString("toSpeed", toSpeed)?.putString("history", historyList.take(30).joinToString("||"))?.apply() }
     fun updateKeepScreenOn() { if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
 
-    fun applyTheme() { window.statusBarColor = bgColor; window.navigationBarColor = bgColor; mainContent?.setBackgroundColor(bgColor); drawerMenu?.setBackgroundColor(Utils.lightenColor(bgColor, 0.06f)); updateHandednessLayout(); updateDrawerSelection(); switchTab(currentTabIndex) }
+    fun applyTheme() { window.statusBarColor = bgColor; window.navigationBarColor = bgColor; mainContent?.setBackgroundColor(bgColor); drawerMenu?.setBackgroundColor(if (isIosGlassMode) Color.argb(225, Color.red(bgColor), Color.green(bgColor), Color.blue(bgColor)) else Utils.lightenColor(bgColor, 0.06f)); pipBtn.text = if (isIosGlassMode) "PiP" else "🧮"; historyBtn.text = if (isIosGlassMode) "היסטוריה" else "🕒"; pipBtn.textSize = if (isIosGlassMode) 14f else 22f; historyBtn.textSize = if (isIosGlassMode) 14f else 20f; pipBtn.setTextColor(primaryColor); historyBtn.setTextColor(primaryColor); updateHandednessLayout(); updateDrawerSelection(); switchTab(currentTabIndex) }
     private fun openDrawer() { updateHandednessLayout(); dimView.visibility = View.VISIBLE; dimView.animate().alpha(1f).setDuration(250).start(); drawerScroll.animate().translationX(0f).setDuration(280).setInterpolator(DecelerateInterpolator()).start(); isDrawerOpen = true }
     private fun closeDrawer() { val targetX = if (isRightHanded) dp(280f).toFloat() else -dp(280f).toFloat(); dimView.animate().alpha(0f).setDuration(250).withEndAction { dimView.visibility = View.GONE }.start(); drawerScroll.animate().translationX(targetX).setDuration(250).setInterpolator(AccelerateInterpolator()).start(); isDrawerOpen = false }
         fun feedback(view: View, symbol: String = "") {
@@ -295,6 +299,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun updateDrawerSelection() {
         for (i in drawerItemsViews.indices) {
             val tv = drawerItemsViews[i] as TextView
+            tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], isIosGlassMode)
             if (i == currentTabIndex) { tv.setBackgroundColor(Color.argb(45, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))); tv.setTextColor(primaryColor) }
             else { tv.setBackgroundColor(Color.TRANSPARENT); tv.setTextColor(Color.WHITE) }
         }
@@ -399,10 +404,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun createCalculatorLayout(rows: List<List<String>>, isGrid5x7: Boolean = false): View {
         keypadButtons.clear()
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutDirection = View.LAYOUT_DIRECTION_LTR; setPadding(dp(14f), dp(0f), dp(14f), dp(14f)) }
-        val displayCard = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM or Gravity.END; setPadding(dp(20f), dp(16f), dp(20f), dp(16f)); background = GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.07f)); cornerRadius = dp(28f).toFloat(); setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))) } }
+        val displayCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM or Gravity.END; setPadding(dp(20f), dp(16f), dp(20f), dp(16f))
+            background = if (isIosGlassMode) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 30f) else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.07f)); cornerRadius = dp(28f).toFloat(); setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))) }
+            if (isIosGlassMode) IosGlassTheme.apply3DElevation(this, 10f)
+        }
 
         memoryIndicator = TextView(this).apply { text = if (memoryValue != 0.0) "M = ${Utils.formatResult(memoryValue, calcPrecision)}" else ""; setTextColor(primaryColor); textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.START }
-        expressionView = TextView(this).apply { text = ""; setTextColor(Color.parseColor("#8A94A8")); setAutoSizeTextTypeUniformWithConfiguration(12, 22, 2, TypedValue.COMPLEX_UNIT_SP); gravity = Gravity.END; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f) }
+        expressionView = TextView(this).apply { text = ""; setTextColor(if (isIosGlassMode) Color.parseColor("#D0DCE8") else Color.parseColor("#8A94A8")); setAutoSizeTextTypeUniformWithConfiguration(12, 22, 2, TypedValue.COMPLEX_UNIT_SP); gravity = Gravity.END; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f) }
         currentView = TextView(this).apply { text = if(currentInput.isEmpty()) "0" else currentInput; setTextColor(Color.WHITE); typeface = Typeface.create("sans-serif-light", Typeface.NORMAL); setAutoSizeTextTypeUniformWithConfiguration(18, 56, 2, TypedValue.COMPLEX_UNIT_SP); gravity = Gravity.END; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f) }
 
         displayCard.addView(memoryIndicator); displayCard.addView(expressionView); displayCard.addView(currentView)
@@ -431,15 +440,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         val keypad = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         for (rowSymbols in rows) {
-            val rowLayout = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutDirection = View.LAYOUT_DIRECTION_LTR
-            }
+            val rowLayout = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; layoutDirection = View.LAYOUT_DIRECTION_LTR }
             for (symbol in rowSymbols) {
                 val weight = if (!isGrid5x7 && symbol == "0") 2f else 1f
                 val btn = createAnimatedButton(symbol, isGrid5x7)
                 keypadButtons[symbol] = btn
-                rowLayout.addView(btn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, weight).apply { setMargins(dp(3f), dp(3f), dp(3f), dp(3f)) })
+                rowLayout.addView(btn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, weight).apply { setMargins(dp(4f), dp(4f), dp(4f), dp(4f)) })
             }
             keypad.addView(rowLayout, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         }
@@ -449,10 +455,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val isMem = symbol in listOf("MC", "MR", "M+", "M-"); val isOp = symbol in listOf("÷", "×", "−", "+", "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e", "(", ")")
         val defaultBg = when { symbol == "AC" -> Utils.lightenColor(Color.RED, 0.2f); symbol == "=" -> primaryColor; isMem -> Utils.lightenColor(bgColor, 0.03f); symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> Utils.lightenColor(bgColor, 0.1f); else -> Utils.lightenColor(bgColor, 0.06f) }
         val strokeColor = if (symbol == "=" || symbol == "AC") Color.TRANSPARENT else Utils.lightenColor(bgColor, 0.15f)
-        val textColor = when { symbol == "AC" -> Color.WHITE; symbol == "=" -> Color.parseColor("#08090C"); isMem || symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> primaryColor; else -> Color.WHITE }
+        val textColor = if (isIosGlassMode) Color.WHITE else when { symbol == "AC" -> Color.WHITE; symbol == "=" -> Color.parseColor("#08090C"); isMem || symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> primaryColor; else -> Color.WHITE }
         val shape = GradientDrawable().apply { this.shape = GradientDrawable.RECTANGLE; cornerRadius = dp(buttonCornerStyle).toFloat(); setColor(defaultBg); setStroke(dp(1.5f), strokeColor) }
+        val btnDrawable = if (isIosGlassMode) IosGlassTheme.createGlassButtonDrawable(this, symbol, isMem) else RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null)
         return TextView(this).apply {
-            text = symbol; setTextColor(textColor); setAutoSizeTextTypeUniformWithConfiguration(10, if(isSmall) 22 else 28, 2, TypedValue.COMPLEX_UNIT_SP); typeface = if (symbol == "=" || isOp || isMem) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif-medium", Typeface.NORMAL); gravity = Gravity.CENTER; background = RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null); isClickable = true
+            text = symbol; setTextColor(textColor); setAutoSizeTextTypeUniformWithConfiguration(10, if(isSmall) 22 else 28, 2, TypedValue.COMPLEX_UNIT_SP); typeface = if (symbol == "=" || isOp || isMem) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif-medium", Typeface.NORMAL); gravity = Gravity.CENTER; background = btnDrawable; isClickable = true
+            if (isIosGlassMode) {
+                IosGlassTheme.apply3DElevation(this, 6f)
+                setShadowLayer(4f, 0f, 2f, Color.argb(110, 0, 0, 0))
+            }
             setOnTouchListener { v, e ->
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
@@ -504,187 +515,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    private fun createUniversalConverter(
-        pickerTitle: String,
-        itemsProvider: () -> List<String>,
-        getFrom: () -> String,
-        getTo: () -> String,
-        setUnits: (String, String) -> Unit,
-        displayLabel: (String) -> String = { it },
-        convertLogic: (Double, String, String, (String, String) -> Unit) -> Unit
-    ): View {
-        val scroll = ScrollView(this)
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(10f), dp(20f), dp(24f)) }
-
-        var fromBtn: TextView? = null
-        var toBtn: TextView? = null
-        val amountInput = createInputBox("הזן כמות להמרה...")
-        val resCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20f), dp(22f), dp(20f), dp(22f))
-            background = GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.08f)); cornerRadius = dp(22f).toFloat(); setStroke(dp(1.5f), primaryColor) }
-            visibility = View.GONE
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16f) }
-        }
-        val mainResTv = TextView(this).apply { setTextColor(Color.WHITE); textSize = 26f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER }
-        val subResTv = TextView(this).apply { setTextColor(primaryColor); textSize = 14f; gravity = Gravity.CENTER; setPadding(0, dp(8f), 0, 0) }
-        resCard.addView(mainResTv); resCard.addView(subResTv)
-        resCard.setOnClickListener { if (mainResTv.text.isNotEmpty()) copyToClipboard(mainResTv.text.toString()) }
-
-        fun runConversion() {
-            val v = amountInput.text.toString().toDoubleOrNull()
-            if (v == null) { resCard.visibility = View.GONE; return }
-            convertLogic(v, getFrom(), getTo()) { mainText, subText ->
-                resCard.visibility = View.VISIBLE
-                mainResTv.text = mainText; subResTv.text = subText
-                if (useAnimations) {
-                    resCard.scaleX = 0.94f; resCard.scaleY = 0.94f
-                    resCard.animate().scaleX(1f).scaleY(1f).setDuration(220).setInterpolator(OvershootInterpolator(1.4f)).start()
-                }
-            }
-        }
-
-        fromBtn = createActionBtn("מ: ${displayLabel(getFrom())}", false) {
-            showItemPicker("$pickerTitle (מקור)", itemsProvider()) { selected ->
-                setUnits(selected, getTo())
-                fromBtn?.text = "מ: ${displayLabel(getFrom())}"
-                runConversion()
-            }
-        }
-
-        val swapContainer = FrameLayout(this).apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10f) } }
-        val swapBtn = TextView(this).apply {
-            text = "⇅ החלף כיוון"; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.parseColor("#08090C")); gravity = Gravity.CENTER
-            setPadding(dp(24f), dp(12f), dp(24f), dp(12f))
-            background = GradientDrawable().apply { setColor(primaryColor); cornerRadius = dp(50f).toFloat() }
-            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER)
-            setOnClickListener { v ->
-                feedback(v)
-                if (useAnimations) v.animate().rotationBy(180f).setDuration(320).setInterpolator(OvershootInterpolator()).start()
-                val oldFrom = getFrom(); val oldTo = getTo()
-                setUnits(oldTo, oldFrom)
-                fromBtn?.text = "מ: ${displayLabel(getFrom())}"
-                toBtn?.text = "ל: ${displayLabel(getTo())}"
-                runConversion()
-            }
-        }
-        swapContainer.addView(swapBtn)
-
-        toBtn = createActionBtn("ל: ${displayLabel(getTo())}", false) {
-            showItemPicker("$pickerTitle (יעד)", itemsProvider()) { selected ->
-                setUnits(getFrom(), selected)
-                toBtn?.text = "ל: ${displayLabel(getTo())}"
-                runConversion()
-            }
-        }
-
-        amountInput.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) { runConversion() }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
-
-        val calcBtn = createActionBtn("חשב והמר 🔄", true) { runConversion() }
-
-        root.addView(fromBtn); root.addView(swapContainer); root.addView(toBtn); root.addView(amountInput); root.addView(calcBtn); root.addView(resCard)
-        scroll.addView(root); return scroll
-    }
-        fun createCurrencyCalculator(): View = createUniversalConverter(
-        pickerTitle = "בחר מטבע",
-        itemsProvider = { allCurrencies },
-        getFrom = { fromCurrency },
-        getTo = { toCurrency },
-        setUnits = { f, t -> fromCurrency = extractCurrencyCode(f); toCurrency = extractCurrencyCode(t); savePreferences() },
-        displayLabel = { code -> CurrencyData.getFullName(extractCurrencyCode(code)) },
-        convertLogic = { amount, fRaw, tRaw, onResult ->
-            val fCode = extractCurrencyCode(fRaw); val tCode = extractCurrencyCode(tRaw)
-            fun computeWithCache() {
-                val rFrom = cachedRates[fCode] ?: if (fCode == "USD") 1.0 else null
-                val rTo = cachedRates[tCode] ?: if (tCode == "USD") 1.0 else null
-                if (rFrom != null && rTo != null && rFrom > 0) {
-                    val unitRate = rTo / rFrom
-                    val converted = amount * unitRate
-                    onResult("${Utils.formatResult(converted, 4)} $tCode", "שער יציג: 1 $fCode = ${Utils.formatResult(unitRate, 4)} $tCode (לחץ להעתקה)")
-                } else {
-                    onResult("טוען שערים...", "מתחבר לשרת המטבעות...")
-                    fetchAndCacheCurrencies { ok ->
-                        if (ok && cachedRates.containsKey(fCode) && cachedRates.containsKey(tCode)) {
-                            val uRate = cachedRates[tCode]!! / cachedRates[fCode]!!
-                            onResult("${Utils.formatResult(amount * uRate, 4)} $tCode", "שער יציג: 1 $fCode = ${Utils.formatResult(uRate, 4)} $tCode")
-                        } else {
-                            onResult("שגיאת חיבור", "בדוק חיבור אינטרנט ונסה שוב")
-                        }
-                    }
-                }
-            }
-            computeWithCache()
-        }
-    )
-
-    fun createDistanceCalculator(): View {
-        val units = mapOf(
-            "מילימטר (mm)" to 0.001, "סנטימטר (cm)" to 0.01, "דצימטר (dm)" to 0.1, "מטר (m)" to 1.0,
-            "קילומטר (km)" to 1000.0, "אינץ' (in)" to 0.0254, "רגל - פיט (ft)" to 0.3048,
-            "יארד (yd)" to 0.9144, "מייל (mi)" to 1609.344, "מייל ימי (nmi)" to 1852.0,
-            "מיקרומטר (µm)" to 1e-6, "ננומטר (nm)" to 1e-9, "אמה (cubit)" to 0.48, "שנת אור (ly)" to 9.4607e15
-        )
-        return createUniversalConverter("בחר יחידת אורך", { units.keys.toList() }, { fromDist }, { toDist }, { f, t -> fromDist = f; toDist = t; savePreferences() }) { v, f, t, cb ->
-            val fFactor = units[f] ?: 1.0; val tFactor = units[t] ?: 1.0
-            val res = v * fFactor / tFactor; val unitRate = fFactor / tFactor
-            cb("${Utils.formatResult(res, calcPrecision)} ${t.substringBefore(" ")}", "יחס: 1 ${f.substringBefore(" ")} = ${Utils.formatResult(unitRate, 6)} ${t.substringBefore(" ")}")
-        }
-    }
-
-    fun createWeightCalculator(): View {
-        val units = mapOf(
-            "מיליגרם (mg)" to 1e-6, "גרם (g)" to 0.001, "קילוגרם (kg)" to 1.0, "טון מטרי (t)" to 1000.0,
-            "אונקיה (oz)" to 0.02834952, "פאונד (lbs)" to 0.45359237, "סטון (st)" to 6.350293,
-            "קראט (ct)" to 0.0002, "גריין (gr)" to 0.0000647989, "טון אמריקאי (US ton)" to 907.18474, "טון בריטי (UK ton)" to 1016.0469
-        )
-        return createUniversalConverter("בחר יחידת משקל", { units.keys.toList() }, { fromWeight }, { toWeight }, { f, t -> fromWeight = f; toWeight = t; savePreferences() }) { v, f, t, cb ->
-            val fFactor = units[f] ?: 1.0; val tFactor = units[t] ?: 1.0
-            val res = v * fFactor / tFactor; val unitRate = fFactor / tFactor
-            cb("${Utils.formatResult(res, calcPrecision)} ${t.substringBefore(" ")}", "יחס: 1 ${f.substringBefore(" ")} = ${Utils.formatResult(unitRate, 6)} ${t.substringBefore(" ")}")
-        }
-    }
-
-    fun createTempCalculator(): View {
-        val units = listOf("צלזיוס (°C)", "פרנהייט (°F)", "קלווין (K)", "רנקין (°R)", "דליל (°De)", "ניוטון (°N)", "ראומיר (°Ré)", "רומר (°Rø)")
-        fun toCelsius(v: Double, u: String): Double = when (u) {
-            "פרנהייט (°F)" -> (v - 32.0) * 5.0 / 9.0
-            "קלווין (K)" -> v - 273.15
-            "רנקין (°R)" -> (v - 491.67) * 5.0 / 9.0
-            "דליל (°De)" -> 100.0 - v * 2.0 / 3.0
-            "ניוטון (°N)" -> v * 100.0 / 33.0
-            "ראומיר (°Ré)" -> v * 5.0 / 4.0
-            "רומר (°Rø)" -> (v - 7.5) * 40.0 / 21.0
-            else -> v
-        }
-        fun fromCelsius(c: Double, u: String): Double = when (u) {
-            "פרנהייט (°F)" -> c * 9.0 / 5.0 + 32.0
-            "קלווין (K)" -> c + 273.15
-            "רנקין (°R)" -> (c + 273.15) * 9.0 / 5.0
-            "דליל (°De)" -> (100.0 - c) * 1.5
-            "ניוטון (°N)" -> c * 33.0 / 100.0
-            "ראומיר (°Ré)" -> c * 4.0 / 5.0
-            "רומר (°Rø)" -> c * 21.0 / 40.0 + 7.5
-            else -> c
-        }
-        return createUniversalConverter("בחר סולם טמפרטורה", { units }, { fromTemp }, { toTemp }, { f, t -> fromTemp = f; toTemp = t; savePreferences() }) { v, f, t, cb ->
-            val c = toCelsius(v, f); val res = fromCelsius(c, t)
-            cb("${Utils.formatResult(res, 4)} ${t.substringAfter("(").removeSuffix(")")}", "שוות ערך ל-${Utils.formatResult(c, 2)}°C (נקודת קיפאון: 0°C)")
-        }
-    }
-
     private fun createSpeedCalculator(): View {
-        val units = mapOf(
-            "קמ״ש (km/h)" to (1.0 / 3.6), "מטר לשנייה (m/s)" to 1.0, "מייל לשעה (mph)" to 0.44704,
-            "קשר ימי (Knot)" to 0.514444, "רגל לשנייה (ft/s)" to 0.3048, "מאך - מהירות הקול (Mach)" to 343.0, "מהירות האור (c)" to 299792458.0
-        )
-        return createUniversalConverter("בחר יחידת מהירות", { units.keys.toList() }, { fromSpeed }, { toSpeed }, { f, t -> fromSpeed = f; toSpeed = t; savePreferences() }) { v, f, t, cb ->
-            val fFactor = units[f] ?: 1.0; val tFactor = units[t] ?: 1.0
-            val res = v * fFactor / tFactor; val unitRate = fFactor / tFactor
-            cb("${Utils.formatResult(res, calcPrecision)} ${t.substringBefore(" ")}", "יחס: 1 ${f.substringBefore(" ")} = ${Utils.formatResult(unitRate, 5)} ${t.substringBefore(" ")}")
-        }
+        val units = mapOf("קמ״ש (km/h)" to (1.0 / 3.6), "מטר לשנייה (m/s)" to 1.0, "מייל לשעה (mph)" to 0.44704, "קשר ימי (Knot)" to 0.514444, "רגל לשנייה (ft/s)" to 0.3048, "מאך (Mach)" to 343.0)
+        return createConverterLayout("מהירות", units.keys.toList(), fromSpeed, toSpeed, { fromSpeed = it }, { toSpeed = it }) { v, f, t -> v * (units[f] ?: 1.0) / (units[t] ?: 1.0) }
     }
 
     private fun createCompoundInterestCalculator(): View {
@@ -710,28 +543,22 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         scroll.addView(root); return scroll
     }
 
-    fun createInputBox(hintText: String): EditText { return EditText(this).apply { hint = hintText; setHintTextColor(Color.parseColor("#5C657A")); setTextColor(Color.WHITE); inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED; textSize = 17f; setPadding(dp(18f), dp(18f), dp(18f), dp(18f)); background = GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(16f).toFloat(); setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f)) }; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(14f) } } }
-    fun createActionBtn(textStr: String, isPrimary: Boolean = true, onClick: (View) -> Unit): TextView { val shape = GradientDrawable().apply { setColor(if (isPrimary) primaryColor else Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(buttonCornerStyle).toFloat(); if (!isPrimary) setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f)) }; return TextView(this).apply { text = textStr; gravity = Gravity.CENTER; setTextColor(if (isPrimary) Color.parseColor("#08090C") else Color.WHITE); textSize = 15f; typeface = Typeface.DEFAULT_BOLD; background = RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null); setPadding(dp(12f), dp(16f), dp(12f), dp(16f)); layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10f) }; isClickable = true; setOnClickListener { feedback(it); onClick(it) } } }
+    fun createInputBox(hintText: String): EditText { return EditText(this).apply { hint = hintText; setHintTextColor(Color.parseColor("#8A94A8")); setTextColor(Color.WHITE); inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED; textSize = 17f; setPadding(dp(18f), dp(18f), dp(18f), dp(18f)); background = if (isIosGlassMode) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 18f) else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(16f).toFloat(); setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f)) }; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(14f) } } }
+    fun createActionBtn(textStr: String, isPrimary: Boolean = true, onClick: (View) -> Unit): TextView { val shape = GradientDrawable().apply { setColor(if (isPrimary) primaryColor else Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(buttonCornerStyle).toFloat(); if (!isPrimary) setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f)) }; val bgDraw = if (isIosGlassMode) IosGlassTheme.createGlassButtonDrawable(this, if (isPrimary) "=" else "0", false) else RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null); return TextView(this).apply { text = textStr; gravity = Gravity.CENTER; setTextColor(if (isPrimary && !isIosGlassMode) Color.parseColor("#08090C") else Color.WHITE); textSize = 15f; typeface = Typeface.DEFAULT_BOLD; background = bgDraw; setPadding(dp(12f), dp(16f), dp(12f), dp(16f)); layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10f) }; isClickable = true; if (isIosGlassMode) IosGlassTheme.apply3DElevation(this, 5f); setOnClickListener { feedback(it); onClick(it) } } }
     fun createResultTextView(): TextView = TextView(this).apply { setTextColor(Color.WHITE); textSize = 20f; gravity = Gravity.CENTER; setPadding(0, dp(20f), 0, 0); setOnClickListener { if (text.isNotEmpty()) copyToClipboard(text.toString()) } }
 
     override fun onDestroy() { tts?.shutdown(); soundPool.release(); super.onDestroy() }
     fun dp(value: Float): Int = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, resources.displayMetrics).toInt()
-
-    fun shakeScreen() {
-        val animator = android.animation.ObjectAnimator.ofFloat(mainContent, "translationX", 0f, 35f, -35f, 25f, -25f, 15f, -15f, 6f, -6f, 0f)
-        animator.duration = 600; animator.start()
-    }
+    fun shakeScreen() { android.animation.ObjectAnimator.ofFloat(mainContent, "translationX", 0f, 35f, -35f, 25f, -25f, 15f, -15f, 6f, -6f, 0f).apply { duration = 600; start() } }
 
     private val VOICE_REQUEST_CODE = 999
-
     private fun startVoiceRecognition() {
         val intent = Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "he-IL")
             putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "אמור תרגיל (לדוגמה: חמש כפול שמונה)")
         }
-        try { startActivityForResult(intent, VOICE_REQUEST_CODE) }
-        catch (e: Exception) { Toast.makeText(this, "זיהוי קולי לא נתמך במכשיר זה", Toast.LENGTH_SHORT).show() }
+        try { startActivityForResult(intent, VOICE_REQUEST_CODE) } catch (e: Exception) { Toast.makeText(this, "זיהוי קולי לא נתמך במכשיר זה", Toast.LENGTH_SHORT).show() }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -741,27 +568,14 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             if (!matches.isNullOrEmpty()) {
                 if (justCalculated) { currentInput = ""; justCalculated = false }
                 var spoken = matches[0].lowercase()
-                val ops = mapOf(
-                    " פלוס " to "+", " ועוד " to "+", " פחות " to "−", " מינוס " to "−",
-                    " כפול " to "×", " פעמים " to "×", " לחלק ל" to "÷", " חלקי " to "÷",
-                    " נקודה " to ".", " בחזקת " to "^", " בחזקה " to "^", " שורש " to "√",
-                    " אחוז " to "%", " אחוזים " to "%", " פתח סוגריים " to "(",
-                    " סגור סוגריים " to ")", " פאי " to "π", " עצרת " to "!",
-                    "פלוס" to "+", "ועוד" to "+", "פחות" to "−", "מינוס" to "−",
-                    "כפול" to "×", "פעמים" to "×", "לחלק ל" to "÷", "חלקי" to "÷",
-                    "נקודה" to ".", "בחזקת" to "^", "בחזקה" to "^", "שורש" to "√",
-                    "אחוזים" to "%", "אחוז" to "%", "פאי" to "π", "עצרת" to "!"
-                )
-                val nums = mapOf("אפס" to "0", "אחת" to "1", "אחד" to "1", "שתיים" to "2", "שניים" to "2", "שלוש" to "3", "שלושה" to "3", "ארבע" to "4", "ארבעה" to "4", "חמש" to "5", "חמישה" to "5", "שש" to "6", "שישה" to "6", "שבע" to "7", "שבעה" to "7", "שמונה" to "8", "תשע" to "9", "תשעה" to "9", "עשר" to "10", "עשרה" to "10", "אחת עשרה" to "11", "אחד עשר" to "11", "שתים עשרה" to "12", "שנים עשר" to "12", "שלוש עשרה" to "13", "שלושה עשר" to "13", "ארבע עשרה" to "14", "ארבעה עשר" to "14", "חמש עשרה" to "15", "חמישה עשר" to "15", "שש עשרה" to "16", "שישה עשר" to "16", "שבע עשרה" to "17", "שבעה עשר" to "17", "שמונה עשרה" to "18", "שמונה עשר" to "18", "תשע עשרה" to "19", "תשעה עשר" to "19", "עשרים" to "20", "שלושים" to "30", "ארבעים" to "40", "חמישים" to "50", "שישים" to "60", "שבעים" to "70", "שמונים" to "80", "תשעים" to "90", "מאה" to "100")
+                val ops = mapOf(" פלוס " to "+", " ועוד " to "+", " פחות " to "−", " מינוס " to "−", " כפול " to "×", " פעמים " to "×", " לחלק ל" to "÷", " חלקי " to "÷", " נקודה " to ".", " בחזקת " to "^", " בחזקה " to "^", " שורש " to "√", " אחוז " to "%", " אחוזים " to "%", " פתח סוגריים " to "(", " סגור סוגריים " to ")", " פאי " to "π", " עצרת " to "!", "פלוס" to "+", "ועוד" to "+", "פחות" to "−", "מינוס" to "−", "כפול" to "×", "פעמים" to "×", "לחלק ל" to "÷", "חלקי" to "÷", "נקודה" to ".", "בחזקת" to "^", "בחזקה" to "^", "שורש" to "√", "אחוזים" to "%", "אחוז" to "%", "פאי" to "π", "עצרת" to "!")
+                val nums = mapOf("אפס" to "0", "אחת" to "1", "אחד" to "1", "שתיים" to "2", "שניים" to "2", "שלוש" to "3", "שלושה" to "3", "ארבע" to "4", "ארבעה" to "4", "חמש" to "5", "חמישה" to "5", "שש" to "6", "שישה" to "6", "שבע" to "7", "שבעה" to "7", "שמונה" to "8", "תשע" to "9", "תשעה" to "9", "עשר" to "10", "עשרה" to "10", "מאה" to "100")
                 for ((w, s) in ops) spoken = spoken.replace(w, s)
                 for ((w, s) in nums) spoken = spoken.replace(Regex("\\b$w\\b"), s)
-                spoken = spoken.replace(" ", "")
-                val cleanMath = spoken.replace("-", "−").replace(Regex("[^0-9.−+×÷^√%!()π!]"), "")
+                val cleanMath = spoken.replace(" ", "").replace("-", "−").replace(Regex("[^0-9.−+×÷^√%!()π!]"), "")
                 currentInput += cleanMath
                 currentView?.text = if (currentInput.isEmpty()) "0" else currentInput
-                if (cleanMath.any { it in listOf('+', '−', '×', '÷', '^', '√', '%') } && cleanMath.lastOrNull()?.isDigit() == true) {
-                    onEquationButtonClick("=")
-                }
+                if (cleanMath.any { it in listOf('+', '−', '×', '÷', '^', '√', '%') } && cleanMath.lastOrNull()?.isDigit() == true) onEquationButtonClick("=")
             }
         }
     }
