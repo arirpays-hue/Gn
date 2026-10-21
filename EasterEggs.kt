@@ -81,7 +81,7 @@ fun MainActivity.checkEasterEggs(input: String): Boolean {
             }
             return true
         }
-                "911" -> {
+        "911" -> {
             justCalculated = true
             val resId = resources.getIdentifier("siren", "raw", packageName)
             if (resId != 0) {
@@ -97,6 +97,40 @@ fun MainActivity.checkEasterEggs(input: String): Boolean {
                 for (i in 1..20) { Handler(Looper.getMainLooper()).post { mainContent?.setBackgroundColor(colors[i % 2]) }; Thread.sleep(150) }
                 Handler(Looper.getMainLooper()).post { mainContent?.setBackgroundColor(orig) }
             }
+            return true
+        }
+                // 🚨 מם ה-FBI עם צליל ההלם 🚨
+        "999" -> {
+            primaryColor = Color.parseColor("#FF3B30")
+            bgColor = Color.parseColor("#0B0E14")
+            savePreferences()
+            applyTheme()
+            expressionView?.text = "🚨 FBI OPEN UP! 🚨"
+            currentInput = "We Know What You Did 🕵️‍♂️"
+            currentView?.text = currentInput
+            justCalculated = true
+            shakeScreen()
+            
+            // השמעת הסאונד (השם חייב להיות באותיות קטנות באנדרואיד)
+            val resId = resources.getIdentifier("fahhh_kcgaxfs", "raw", packageName)
+            if (resId != 0) {
+                activeMediaPlayer?.release()
+                activeMediaPlayer = MediaPlayer.create(this, resId)
+                activeMediaPlayer?.start()
+            } else {
+                Toast.makeText(this, "⚠️ קובץ הסאונד חסר! ודא ששינית את שמו ל-fahhh_kcgaxfs.mp3", Toast.LENGTH_LONG).show()
+            }
+
+            thread {
+                val orig = bgColor
+                val cols = listOf(Color.RED, Color.BLUE)
+                for (i in 1..14) { 
+                    Handler(Looper.getMainLooper()).post { mainContent?.setBackgroundColor(cols[i % 2]) }
+                    Thread.sleep(120) 
+                }
+                Handler(Looper.getMainLooper()).post { mainContent?.setBackgroundColor(orig) }
+            }
+            Toast.makeText(this, "🚨 סוכני ה-FBI בדרך אליך!", Toast.LENGTH_LONG).show()
             return true
         }
 
@@ -169,7 +203,8 @@ fun MainActivity.checkEasterEggs(input: String): Boolean {
             if (useHaptic) mainContent?.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             return true
         }
-                // --- 🔥 ביצי פסחא של ממים ברשת (קצרים וארוכים) ---
+
+        // --- 🔥 ביצי פסחא של ממים ברשת (קצרים וארוכים) ---
         // 🐸 מם 420: Doge / Crypto Moon
         "420" -> {
             primaryColor = Color.parseColor("#00E676")
@@ -183,8 +218,7 @@ fun MainActivity.checkEasterEggs(input: String): Boolean {
             Toast.makeText(this, "🐕 Wow! Such Profit!", Toast.LENGTH_SHORT).show()
             return true
         }
-
-        // 🗿 מם 69: Nice
+                // 🗿 מם 69: Nice
         "69" -> {
             expressionView?.text = "🗿 Moai Approved"
             currentInput = "Nice. 🗿"
