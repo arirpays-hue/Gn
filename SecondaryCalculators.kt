@@ -43,21 +43,6 @@ fun MainActivity.createLoanCalculator(): View {
     root.addView(amountInput); root.addView(monthsInput); root.addView(interestInput); root.addView(btn); root.addView(resText); return root
 }
 
-fun MainActivity.createDistanceCalculator(): View { return createConverterLayout("מרחק", listOf("קילומטר (km)", "מייל (mi)", "מטר (m)", "סנטימטר (cm)", "רגל (ft)", "אינץ' (in)"), fromDist, toDist, { fromDist = it }, { toDist = it }) { v, f, t ->
-    val inMeters = when (f) { "קילומטר (km)" -> v * 1000; "מייל (mi)" -> v * 1609.34; "סנטימטר (cm)" -> v / 100; "רגל (ft)" -> v * 0.3048; "אינץ' (in)" -> v * 0.0254; else -> v }
-    when (t) { "קילומטר (km)" -> inMeters / 1000; "מייל (mi)" -> inMeters / 1609.34; "סנטימטר (cm)" -> inMeters * 100; "רגל (ft)" -> inMeters / 0.3048; "אינץ' (in)" -> inMeters / 0.0254; else -> inMeters }
-} }
-
-fun MainActivity.createWeightCalculator(): View { return createConverterLayout("משקל", listOf("קילוגרם (kg)", "פאונד (lbs)", "גרם (g)", "אונקיה (oz)", "טון (t)"), fromWeight, toWeight, { fromWeight = it }, { toWeight = it }) { v, f, t ->
-    val inKg = when (f) { "פאונד (lbs)" -> v * 0.453592; "גרם (g)" -> v / 1000; "אונקיה (oz)" -> v * 0.0283495; "טון (t)" -> v * 1000; else -> v }
-    when (t) { "פאונד (lbs)" -> inKg / 0.453592; "גרם (g)" -> inKg * 1000; "אונקיה (oz)" -> inKg / 0.0283495; "טון (t)" -> inKg / 1000; else -> inKg }
-} }
-
-fun MainActivity.createTempCalculator(): View { return createConverterLayout("טמפרטורה", listOf("צלזיוס (°C)", "פרנהייט (°F)", "קלווין (K)"), fromTemp, toTemp, { fromTemp = it }, { toTemp = it }) { v, f, t ->
-    val inC = when (f) { "פרנהייט (°F)" -> (v - 32) * 5 / 9; "קלווין (K)" -> v - 273.15; else -> v }
-    when (t) { "פרנהייט (°F)" -> inC * 9 / 5 + 32; "קלווין (K)" -> inC + 273.15; else -> inC }
-} }
-
 fun MainActivity.createConverterLayout(title: String, options: List<String>, currentFrom: String, currentTo: String, saveFrom: (String) -> Unit, saveTo: (String) -> Unit, calc: (Double, String, String) -> Double): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(20f), dp(20f), dp(20f)) }
     var locFrom = currentFrom; var locTo = currentTo
@@ -132,41 +117,13 @@ fun MainActivity.createAgeCalculator(): View {
     root.addView(btn); root.addView(resText); return root
 }
 
-fun MainActivity.createCurrencyCalculator(): View {
-    val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(20f), dp(20f), dp(20f)) }
-    var locFrom = fromCurrency; var locTo = toCurrency
-    val btnFrom = createActionBtn("מ: ${CurrencyData.getFullName(extractCurrencyCode(locFrom))}", false) {}
-    val btnTo = createActionBtn("ל: ${CurrencyData.getFullName(extractCurrencyCode(locTo))}", false) {}
-    val input = createInputBox("סכום")
-    val resText = createResultTextView()
-    fun calc() {
-        val v = input.text.toString().toDoubleOrNull(); if (v == null) { resText.text = ""; return }
-        val fCode = extractCurrencyCode(locFrom); val tCode = extractCurrencyCode(locTo)
-        val rFrom = cachedRates[fCode] ?: if (fCode == "USD") 1.0 else null
-        val rTo = cachedRates[tCode] ?: if (tCode == "USD") 1.0 else null
-        if (rFrom != null && rTo != null && rFrom > 0) {
-            val rate = rTo / rFrom
-            resText.text = "${Utils.formatResult(v * rate, 4)} $tCode\n(1 $fCode = ${Utils.formatResult(rate, 4)} $tCode)"
-        } else {
-            thread {
-                try {
-                    val res = URL("https://open.er-api.com/v6/latest/$fCode").readText()
-                    val json = JSONObject(res); val rate = json.getJSONObject("rates").getDouble(tCode)
-                    Handler(Looper.getMainLooper()).post { resText.text = "${Utils.formatResult(v * rate, 4)} $tCode" }
-                } catch (e: Exception) { Handler(Looper.getMainLooper()).post { resText.text = "שגיאת רשת" } }
-            }
-        }
-    }
-    btnFrom.setOnClickListener { feedback(it); showItemPicker("מטבע מקור", allCurrencies) { sel -> locFrom = sel; fromCurrency = extractCurrencyCode(sel); savePreferences(); btnFrom.text = "מ: ${CurrencyData.getFullName(fromCurrency)}"; calc() } }
-    btnTo.setOnClickListener { feedback(it); showItemPicker("מטבע יעד", allCurrencies) { sel -> locTo = sel; toCurrency = extractCurrencyCode(sel); savePreferences(); btnTo.text = "ל: ${CurrencyData.getFullName(toCurrency)}"; calc() } }
-    input.addTextChangedListener(object : TextWatcher { override fun afterTextChanged(s: Editable?) { calc() }; override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}; override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {} })
-    root.addView(btnFrom); root.addView(btnTo); root.addView(input); root.addView(resText); return root
-}
 fun MainActivity.createBmrCalculator(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(20f), dp(20f), dp(20f)) }
     var isMale = true
-    val genderBtn = createActionBtn("מין: גבר 👨", false) {}
-    genderBtn.setOnClickListener { feedback(it); isMale = !isMale; genderBtn.text = if (isMale) "מין: גבר 👨" else "מין: אישה 👩" }
+    val maleLabel = if (isIosGlassMode) "מין: גבר" else "מין: גבר 👨"
+    val femaleLabel = if (isIosGlassMode) "מין: אישה" else "מין: אישה 👩"
+    val genderBtn = createActionBtn(maleLabel, false) {}
+    genderBtn.setOnClickListener { feedback(it); isMale = !isMale; genderBtn.text = if (isMale) maleLabel else femaleLabel }
     val weight = createInputBox("משקל (ק״ג)"); val height = createInputBox("גובה (ס״מ)"); val age = createInputBox("גיל")
     val resText = createResultTextView()
     val btn = createActionBtn("חשב BMR") {
@@ -175,7 +132,6 @@ fun MainActivity.createBmrCalculator(): View {
     }
     root.addView(genderBtn); root.addView(weight); root.addView(height); root.addView(age); root.addView(btn); root.addView(resText); return root
 }
-
 fun MainActivity.createQuadraticCalculator(): View {
     val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(20f), dp(20f), dp(20f)) }
     val aIn = createInputBox("מקדם a"); val bIn = createInputBox("מקדם b"); val cIn = createInputBox("מקדם c")
@@ -212,7 +168,7 @@ fun MainActivity.createFractionCalculator(): View {
 fun MainActivity.createSettingsPage(): View {
     val scroll = ScrollView(this); val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(20f), dp(0f), dp(20f), dp(24f)) }
     
-    val titleThemes = TextView(this).apply { text = "🎨 18 ערכות נושא ופלטות צבעים מוכנות"; setTextColor(Color.WHITE); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)) }
+    val titleThemes = TextView(this).apply { text = if (isIosGlassMode) "18 ערכות נושא ופלטות צבעים מוכנות" else "🎨 18 ערכות נושא ופלטות צבעים מוכנות"; setTextColor(Color.WHITE); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)) }
     val themeScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(16f) } }
     val themeContainer = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
     val presetThemes = listOf(
@@ -229,9 +185,8 @@ fun MainActivity.createSettingsPage(): View {
     for (theme in presetThemes) { val tName = theme.first; val tPri = Color.parseColor(theme.second); val tBg = Color.parseColor(theme.third); val btn = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(12f), dp(12f), dp(12f), dp(12f)); background = GradientDrawable().apply { setColor(tBg); cornerRadius = dp(16f).toFloat(); setStroke(dp(2f), tPri) }; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(dp(6f), dp(6f), dp(6f), dp(6f)) }; addView(TextView(this@createSettingsPage).apply { text = tName; setTextColor(tPri); textSize = 14f; typeface = Typeface.DEFAULT_BOLD }); setOnClickListener { feedback(it); primaryColor = tPri; bgColor = tBg; savePreferences(); applyTheme() } }; themeContainer.addView(btn) }
     themeScroll.addView(themeContainer)
 
-    // כפתור מעבר דו-כיווני בין העיצוב הרגיל לעיצוב iOS זכוכית חלבית תלת-ממד (ללא אימוג'ים בשמות המחשבונים)
     val iosStyleBtn = createActionBtn(
-        if (isIosGlassMode) "סגנון עיצוב: iOS זכוכית חלבית 3D (פעיל) ✨" else "סגנון עיצוב: רגיל (לחץ לעיצוב iOS זכוכית חלבית) 🍎",
+        if (isIosGlassMode) "סגנון עיצוב: iOS 26 Liquid Glass (פעיל)" else "סגנון עיצוב: רגיל (לחץ לעיצוב iOS 26 Liquid Glass) 🍎",
         true
     ) {
         isIosGlassMode = !isIosGlassMode
@@ -242,7 +197,74 @@ fun MainActivity.createSettingsPage(): View {
         savePreferences()
         applyTheme()
     }
-    
+    root.addView(titleThemes); root.addView(themeScroll); root.addView(iosStyleBtn)
+        // --- פאנל התאמה אישית מיוחד שמופיע רק כאשר ממשק ה-iOS מופעל ---
+    if (isIosGlassMode) {
+        val iosPanel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16f), dp(16f), dp(16f), dp(16f))
+            background = IosGlassTheme.createGlassCardDrawable(this@createSettingsPage, 22f)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                topMargin = dp(8f); bottomMargin = dp(12f)
+            }
+        }
+        val iosHeader = TextView(this).apply {
+            text = "התאמה אישית מלאה - iOS 26 Liquid Glass"
+            setTextColor(primaryColor); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.RIGHT
+            setPadding(0, 0, 0, dp(12f))
+        }
+        iosPanel.addView(iosHeader)
+
+        fun addIosSlider(labelPrefix: String, minVal: Int, maxVal: Int, currentVal: Int, unit: String, onValueChange: (Int) -> Unit) {
+            val lbl = TextView(this).apply {
+                text = "$labelPrefix: $currentVal$unit"
+                setTextColor(Color.WHITE); textSize = 14f; gravity = Gravity.RIGHT; setPadding(0, dp(6f), 0, dp(4f))
+            }
+            val seek = SeekBar(this).apply {
+                max = maxVal - minVal
+                progress = (currentVal - minVal).coerceIn(0, maxVal - minVal)
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(s: SeekBar?, p: Int, fromUser: Boolean) {
+                        val v = minVal + p
+                        lbl.text = "$labelPrefix: $v$unit"
+                        if (fromUser) onValueChange(v)
+                    }
+                    override fun onStartTrackingTouch(s: SeekBar?) {}
+                    override fun onStopTrackingTouch(s: SeekBar?) {
+                        savePreferences()
+                        iosPanel.background = IosGlassTheme.createGlassCardDrawable(this@createSettingsPage, 22f)
+                    }
+                })
+            }
+            iosPanel.addView(lbl); iosPanel.addView(seek)
+        }
+
+        addIosSlider("שקיפות ועומק זכוכית (Liquid Opacity)", 75, 245, IosGlassTheme.glassOpacity, "") { IosGlassTheme.glassOpacity = it }
+        addIosSlider("עוצמת טשטוש והשתקפות (Dynamic Blur)", 0, 50, IosGlassTheme.glassBlurRadius.toInt(), "px") { IosGlassTheme.glassBlurRadius = it.toFloat() }
+        addIosSlider("הברקת קצה 1px לבנה (Specular Edge)", 40, 255, IosGlassTheme.specularIntensity, "") { IosGlassTheme.specularIntensity = it }
+        addIosSlider("רדיוס קמירות מקשי הזכוכית (Corner Radius)", 10, 38, IosGlassTheme.glassCornerPt.toInt(), "pt") { IosGlassTheme.glassCornerPt = it.toFloat() }
+        addIosSlider("עוצמת הארת פולימר בלחיצה (Press Glow)", 60, 255, IosGlassTheme.pressGlowIntensity, "") { IosGlassTheme.pressGlowIntensity = it }
+
+        val depthModeBtn = createActionBtn(
+            if (IosGlassTheme.symbolDepthMode == 0) "סגנון סמלים (SF Symbols 6): חרוטים בזכוכית (Etched)" else "סגנון סמלים (SF Symbols 6): מרחפים 1 מ״מ מעל הזכוכית",
+            false
+        ) {
+            IosGlassTheme.symbolDepthMode = if (IosGlassTheme.symbolDepthMode == 0) 1 else 0
+            savePreferences(); switchTab(19)
+        }
+
+        val orangeOpsBtn = createActionBtn(
+            if (IosGlassTheme.useClassicOrangeOps) "צבע מקשי פעולות (+, −, ×, ÷, =): כתום זכוכית מקורי של אפל" else "צבע מקשי פעולות (+, −, ×, ÷, =): מותאם לצבע הנושא",
+            false
+        ) {
+            IosGlassTheme.useClassicOrangeOps = !IosGlassTheme.useClassicOrangeOps
+            savePreferences(); switchTab(19)
+        }
+
+        iosPanel.addView(depthModeBtn); iosPanel.addView(orangeOpsBtn)
+        root.addView(iosPanel)
+    }
+
     var editingTarget = 0; val targetRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16f); bottomMargin = dp(14f) } }
     lateinit var btnEditPrimary: TextView; lateinit var btnEditBg: TextView; lateinit var pickerContainer: FrameLayout
     
@@ -258,14 +280,16 @@ fun MainActivity.createSettingsPage(): View {
         pickerContainer.addView(createColorWheelPicker(this, if (editingTarget == 0) primaryColor else bgColor) { newColor -> 
             if (editingTarget == 0) primaryColor = newColor else {
                 bgColor = newColor; window.statusBarColor = bgColor; window.navigationBarColor = bgColor
-                mainContent?.setBackgroundColor(bgColor); drawerMenu?.setBackgroundColor(Utils.lightenColor(bgColor, 0.06f))
+                if (isIosGlassMode) mainContent?.background = IosGlassTheme.createLiquidAmbientBackground(this)
+                else mainContent?.setBackgroundColor(bgColor)
+                drawerMenu?.setBackgroundColor(if (isIosGlassMode) Color.argb(225, Color.red(bgColor), Color.green(bgColor), Color.blue(bgColor)) else Utils.lightenColor(bgColor, 0.06f))
             }
             savePreferences(); refreshTargetButtons() 
         }) 
     }
     
-    btnEditPrimary = TextView(this).apply { text = "🎨 צבע נושא מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 0; loadColorPicker() } }
-    btnEditBg = TextView(this).apply { text = "🌌 צבע רקע מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 1; loadColorPicker() } }
+    btnEditPrimary = TextView(this).apply { text = if (isIosGlassMode) "צבע נושא מותאם" else "🎨 צבע נושא מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { leftMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 0; loadColorPicker() } }
+    btnEditBg = TextView(this).apply { text = if (isIosGlassMode) "צבע רקע מותאם" else "🌌 צבע רקע מותאם"; gravity = Gravity.CENTER; textSize = 15f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(12f), 0, dp(12f)); layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { rightMargin = dp(6f) }; setOnClickListener { feedback(it); editingTarget = 1; loadColorPicker() } }
     targetRow.addView(btnEditPrimary); targetRow.addView(btnEditBg); pickerContainer = FrameLayout(this).apply { layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(18f) } }; loadColorPicker()
     
     val titleSettings = TextView(this).apply { text = "הגדרות מערכת נוספות"; setTextColor(Color.WHITE); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; setPadding(0, dp(8f), 0, dp(10f)) }
@@ -278,6 +302,6 @@ fun MainActivity.createSettingsPage(): View {
     val shapeBtn = createActionBtn("צורת כפתורים: $shapeName", false) { buttonCornerStyle = when(buttonCornerStyle) { 8f -> 24f; 24f -> 42f; else -> 8f }; savePreferences(); applyTheme() }
     val precBtn = createActionBtn("דיוק עשרוני: $calcPrecision ספרות ⚙️", false) { calcPrecision = if (calcPrecision >= 10) 2 else calcPrecision + 2; savePreferences(); applyTheme() }
     
-    root.addView(titleThemes); root.addView(themeScroll); root.addView(iosStyleBtn); root.addView(targetRow); root.addView(pickerContainer); root.addView(titleSettings)
+    root.addView(targetRow); root.addView(pickerContainer); root.addView(titleSettings)
     root.addView(vibBtn); root.addView(sndBtn); root.addView(sndTypeBtn); root.addView(scrBtn); root.addView(shapeBtn); root.addView(precBtn); scroll.addView(root); return scroll
 }
