@@ -70,7 +70,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     var useHaptic = true; var useSound = true; var useAnimations = true; var keepScreenOn = false; var soundType = 0
     var isRightHanded = true
-    var isIosGlassMode = false // מצב עיצוב זכוכית חלבית תלת-ממד של iOS ללא אימוג'ים
+    var isIosGlassMode = false // מצב עיצוב iOS 26 Liquid Glass ללא אימוג'ים
     var settingsScrollY = 0
     var currentSettingsScroll: ScrollView? = null
     var calcPrecision = 8; var buttonCornerStyle = 24f
@@ -143,7 +143,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         drawerMenu?.addView(appLogo)
 
         for ((index, title) in categories.withIndex()) {
-            val item = TextView(this).apply { text = IosGlassTheme.cleanCategoryTitle(title, isIosGlassMode); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.RIGHT; setPadding(dp(24f), dp(16f), dp(24f), dp(16f)); setOnClickListener { feedback(it); settingsScrollY = 0; switchTab(index); closeDrawer() } }
+            val item = TextView(this).apply {
+                text = IosGlassTheme.cleanCategoryTitle(title, isIosGlassMode)
+                textSize = 16f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                compoundDrawablePadding = dp(12f)
+                setPadding(dp(20f), dp(14f), dp(20f), dp(14f))
+                setOnClickListener { feedback(it); settingsScrollY = 0; switchTab(index); closeDrawer() }
+            }
             drawerItemsViews.add(item); drawerMenu?.addView(item)
         }
 
@@ -169,7 +177,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             titleText.gravity = Gravity.LEFT or Gravity.CENTER_VERTICAL
         }
         for (v in drawerItemsViews) {
-            (v as? TextView)?.gravity = if (isRightHanded) Gravity.RIGHT else Gravity.LEFT
+            (v as? TextView)?.gravity = (if (isRightHanded) Gravity.RIGHT else Gravity.LEFT) or Gravity.CENTER_VERTICAL
         }
         drawerScroll.layoutParams = FrameLayout.LayoutParams(dp(280f), FrameLayout.LayoutParams.MATCH_PARENT).apply {
             gravity = if (isRightHanded) Gravity.RIGHT else Gravity.LEFT
@@ -236,6 +244,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         keepScreenOn = prefs?.getBoolean("keepScreenOn", false) ?: false; soundType = prefs?.getInt("soundType", 0) ?: 0
         isRightHanded = prefs?.getBoolean("isRightHanded", true) ?: true
         isIosGlassMode = prefs?.getBoolean("isIosGlassMode", false) ?: false
+        IosGlassTheme.loadIosPrefs(prefs)
         calcPrecision = prefs?.getInt("calcPrecision", 8) ?: 8; buttonCornerStyle = prefs?.getFloat("buttonCornerStyle", 24f) ?: 24f
         primaryColor = prefs?.getInt("primaryColor", Color.parseColor("#64B5F6")) ?: Color.parseColor("#64B5F6"); bgColor = prefs?.getInt("bgColor", Color.parseColor("#08090C")) ?: Color.parseColor("#08090C")
         memoryValue = Double.fromBits(prefs?.getLong("memoryValue", 0L) ?: 0L); val savedHist = prefs?.getString("history", "") ?: ""
@@ -248,13 +257,49 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         historyList.clear(); if (savedHist.isNotEmpty()) historyList.addAll(savedHist.split("||")); updateKeepScreenOn()
     }
 
-    fun savePreferences() { prefs?.edit()?.putBoolean("useHaptic", useHaptic)?.putBoolean("useSound", useSound)?.putBoolean("useAnimations", useAnimations)?.putBoolean("keepScreenOn", keepScreenOn)?.putBoolean("isRightHanded", isRightHanded)?.putBoolean("isIosGlassMode", isIosGlassMode)?.putInt("soundType", soundType)?.putInt("calcPrecision", calcPrecision)?.putFloat("buttonCornerStyle", buttonCornerStyle)?.putInt("primaryColor", primaryColor)?.putInt("bgColor", bgColor)?.putLong("memoryValue", memoryValue.toRawBits())?.putString("fromCurrency", fromCurrency)?.putString("toCurrency", toCurrency)?.putString("fromDist", fromDist)?.putString("toDist", toDist)?.putString("fromWeight", fromWeight)?.putString("toWeight", toWeight)?.putString("fromTemp", fromTemp)?.putString("toTemp", toTemp)?.putString("fromSpeed", fromSpeed)?.putString("toSpeed", toSpeed)?.putString("history", historyList.take(30).joinToString("||"))?.apply() }
+    fun savePreferences() {
+        IosGlassTheme.saveIosPrefs(prefs)
+        prefs?.edit()?.putBoolean("useHaptic", useHaptic)?.putBoolean("useSound", useSound)?.putBoolean("useAnimations", useAnimations)?.putBoolean("keepScreenOn", keepScreenOn)?.putBoolean("isRightHanded", isRightHanded)?.putBoolean("isIosGlassMode", isIosGlassMode)?.putInt("soundType", soundType)?.putInt("calcPrecision", calcPrecision)?.putFloat("buttonCornerStyle", buttonCornerStyle)?.putInt("primaryColor", primaryColor)?.putInt("bgColor", bgColor)?.putLong("memoryValue", memoryValue.toRawBits())?.putString("fromCurrency", fromCurrency)?.putString("toCurrency", toCurrency)?.putString("fromDist", fromDist)?.putString("toDist", toDist)?.putString("fromWeight", fromWeight)?.putString("toWeight", toWeight)?.putString("fromTemp", fromTemp)?.putString("toTemp", toTemp)?.putString("fromSpeed", fromSpeed)?.putString("toSpeed", toSpeed)?.putString("history", historyList.take(30).joinToString("||"))?.apply()
+    }
     fun updateKeepScreenOn() { if (keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
 
-    fun applyTheme() { window.statusBarColor = bgColor; window.navigationBarColor = bgColor; mainContent?.setBackgroundColor(bgColor); drawerMenu?.setBackgroundColor(if (isIosGlassMode) Color.argb(225, Color.red(bgColor), Color.green(bgColor), Color.blue(bgColor)) else Utils.lightenColor(bgColor, 0.06f)); pipBtn.text = if (isIosGlassMode) "PiP" else "🧮"; historyBtn.text = if (isIosGlassMode) "היסטוריה" else "🕒"; pipBtn.textSize = if (isIosGlassMode) 14f else 22f; historyBtn.textSize = if (isIosGlassMode) 14f else 20f; pipBtn.setTextColor(if (isIosGlassMode) primaryColor else Color.WHITE); historyBtn.setTextColor(if (isIosGlassMode) primaryColor else Color.WHITE); updateHandednessLayout(); updateDrawerSelection(); switchTab(currentTabIndex) }
-    private fun openDrawer() { updateHandednessLayout(); dimView.visibility = View.VISIBLE; dimView.animate().alpha(1f).setDuration(250).start(); drawerScroll.animate().translationX(0f).setDuration(280).setInterpolator(DecelerateInterpolator()).start(); isDrawerOpen = true }
-    private fun closeDrawer() { val targetX = if (isRightHanded) dp(280f).toFloat() else -dp(280f).toFloat(); dimView.animate().alpha(0f).setDuration(250).withEndAction { dimView.visibility = View.GONE }.start(); drawerScroll.animate().translationX(targetX).setDuration(250).setInterpolator(AccelerateInterpolator()).start(); isDrawerOpen = false }
-        fun feedback(view: View, symbol: String = "") {
+    fun applyTheme() {
+        window.statusBarColor = bgColor; window.navigationBarColor = bgColor
+        if (isIosGlassMode) {
+            mainContent?.background = IosGlassTheme.createLiquidAmbientBackground(this)
+            drawerMenu?.background = IosGlassTheme.createGlassCardDrawable(this, 0f)
+            pipBtn.text = ""
+            pipBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 100, primaryColor, 22f), null, null, null)
+            historyBtn.text = ""
+            historyBtn.setCompoundDrawables(IosGlassTheme.createSfSymbolDrawable(this, 101, primaryColor, 22f), null, null, null)
+        } else {
+            mainContent?.setBackgroundColor(bgColor)
+            drawerMenu?.setBackgroundColor(Utils.lightenColor(bgColor, 0.06f))
+            pipBtn.setCompoundDrawables(null, null, null, null)
+            historyBtn.setCompoundDrawables(null, null, null, null)
+            pipBtn.text = "🧮"; historyBtn.text = "🕒"
+            pipBtn.textSize = 22f; historyBtn.textSize = 20f
+            pipBtn.setTextColor(Color.WHITE); historyBtn.setTextColor(Color.WHITE)
+        }
+        updateHandednessLayout(); updateDrawerSelection(); switchTab(currentTabIndex)
+    }
+        private fun openDrawer() {
+        updateHandednessLayout()
+        if (isIosGlassMode) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
+        dimView.visibility = View.VISIBLE; dimView.animate().alpha(1f).setDuration(250).start()
+        drawerScroll.animate().translationX(0f).setDuration(280).setInterpolator(DecelerateInterpolator()).start()
+        isDrawerOpen = true
+    }
+
+    private fun closeDrawer() {
+        if (isIosGlassMode) IosGlassTheme.applyRealtimeGlassBlur(mainContent, false)
+        val targetX = if (isRightHanded) dp(280f).toFloat() else -dp(280f).toFloat()
+        dimView.animate().alpha(0f).setDuration(250).withEndAction { dimView.visibility = View.GONE }.start()
+        drawerScroll.animate().translationX(targetX).setDuration(250).setInterpolator(AccelerateInterpolator()).start()
+        isDrawerOpen = false
+    }
+
+    fun feedback(view: View, symbol: String = "") {
         if (useHaptic) view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         if (useSound && !MiniGameEngine.isAnimalParty) {
             if (symbol == "AC" && acSoundId != 0) {
@@ -268,12 +313,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    fun copyToClipboard(text: String) { val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; cb.setPrimaryClip(ClipData.newPlainText("CalcResult", text)); Toast.makeText(this, "הועתק ללוח 📋", Toast.LENGTH_SHORT).show() }
+    fun copyToClipboard(text: String) { val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; cb.setPrimaryClip(ClipData.newPlainText("CalcResult", text)); Toast.makeText(this, if (isIosGlassMode) "הועתק ללוח" else "הועתק ללוח 📋", Toast.LENGTH_SHORT).show() }
 
     private fun showHistoryDialog() {
         if (historyList.isEmpty()) { Toast.makeText(this, "היסטוריית החישובים ריקה", Toast.LENGTH_SHORT).show(); return }
         val items = historyList.toTypedArray()
-        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle("🕒 היסטוריה").setItems(items) { _, which -> val selected = items[which].substringAfter("=").trim(); currentInput = selected; justCalculated = true; if (currentTabIndex != 0 && currentTabIndex != 1) switchTab(0) else currentView?.text = currentInput }.setNeutralButton("נקה הכל") { _, _ -> historyList.clear(); savePreferences(); Toast.makeText(this, "נמחק", Toast.LENGTH_SHORT).show() }.setPositiveButton("סגור", null).show()
+        val dialogTitle = if (isIosGlassMode) "היסטוריית חישובים" else "🕒 היסטוריה"
+        AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert).setTitle(dialogTitle).setItems(items) { _, which -> val selected = items[which].substringAfter("=").trim(); currentInput = selected; justCalculated = true; if (currentTabIndex != 0 && currentTabIndex != 1) switchTab(0) else currentView?.text = currentInput }.setNeutralButton("נקה הכל") { _, _ -> historyList.clear(); savePreferences(); Toast.makeText(this, "נמחק", Toast.LENGTH_SHORT).show() }.setPositiveButton("סגור", null).show()
     }
 
     fun showItemPicker(title: String, items: List<String>, onSelected: (String) -> Unit) {
@@ -297,13 +343,27 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun updateDrawerSelection() {
         for (i in drawerItemsViews.indices) {
             val tv = drawerItemsViews[i] as TextView
+            val isSelected = (i == currentTabIndex)
+            val tint = if (isSelected) primaryColor else Color.WHITE
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], isIosGlassMode)
-            if (i == currentTabIndex) { tv.setBackgroundColor(Color.argb(45, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))); tv.setTextColor(primaryColor) }
-            else { tv.setBackgroundColor(Color.TRANSPARENT); tv.setTextColor(Color.WHITE) }
+            if (isIosGlassMode) {
+                val icon = IosGlassTheme.createSfSymbolDrawable(this, i, tint, 22f)
+                if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
+                else tv.setCompoundDrawables(icon, null, null, null)
+            } else {
+                tv.setCompoundDrawables(null, null, null, null)
+            }
+            if (isSelected) {
+                tv.setBackgroundColor(Color.argb(50, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor)))
+                tv.setTextColor(primaryColor)
+            } else {
+                tv.setBackgroundColor(Color.TRANSPARENT)
+                tv.setTextColor(Color.WHITE)
+            }
         }
     }
 
-    private fun switchTab(index: Int) {
+    fun switchTab(index: Int) {
         val wasInSettings = (currentTabIndex == 19 && index == 19)
         if (wasInSettings) {
             settingsScrollY = currentSettingsScroll?.scrollY ?: settingsScrollY
@@ -325,7 +385,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 val scrollObj = settingsView as? ScrollView
                 currentSettingsScroll = scrollObj
                 val container = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsView as? LinearLayout)
-                val handBtn = createActionBtn("יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין) 🤚" else "שמאליים (תפריט ופעולות בשמאל) ✋"}", false) {
+                val handLabel = if (isIosGlassMode) {
+                    "יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין)" else "שמאליים (תפריט ופעולות בשמאל)"}"
+                } else {
+                    "יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין) 🤚" else "שמאליים (תפריט ופעולות בשמאל) ✋"}"
+                }
+                val handBtn = createActionBtn(handLabel, false) {
                     isRightHanded = !isRightHanded
                     savePreferences()
                     updateHandednessLayout()
@@ -403,14 +468,36 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         keypadButtons.clear()
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutDirection = View.LAYOUT_DIRECTION_LTR; setPadding(dp(14f), dp(0f), dp(14f), dp(14f)) }
         val displayCard = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM or Gravity.END; setPadding(dp(20f), dp(16f), dp(20f), dp(16f))
-            background = if (isIosGlassMode) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 30f) else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.07f)); cornerRadius = dp(28f).toFloat(); setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))) }
+            orientation = LinearLayout.VERTICAL; gravity = Gravity.BOTTOM or Gravity.END; setPadding(dp(22f), dp(14f), dp(22f), dp(16f))
+            background = if (isIosGlassMode) IosGlassTheme.createGlassCardDrawable(this@MainActivity, IosGlassTheme.glassCornerPt) else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.07f)); cornerRadius = dp(28f).toFloat(); setStroke(dp(1.5f), Color.argb(70, Color.red(primaryColor), Color.green(primaryColor), Color.blue(primaryColor))) }
             if (isIosGlassMode) IosGlassTheme.apply3DElevation(this, 10f)
         }
 
+        if (isIosGlassMode) {
+            val pillBar = View(this).apply {
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(4f).toFloat()
+                    setColor(Color.argb(95, 255, 255, 255))
+                }
+                layoutParams = LinearLayout.LayoutParams(dp(38f), dp(4f)).apply {
+                    gravity = Gravity.CENTER_HORIZONTAL
+                    bottomMargin = dp(4f)
+                }
+            }
+            displayCard.addView(pillBar)
+        }
+
         memoryIndicator = TextView(this).apply { text = if (memoryValue != 0.0) "M = ${Utils.formatResult(memoryValue, calcPrecision)}" else ""; setTextColor(primaryColor); textSize = 12f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.START }
-        expressionView = TextView(this).apply { text = ""; setTextColor(if (isIosGlassMode) Color.parseColor("#D0DCE8") else Color.parseColor("#8A94A8")); setAutoSizeTextTypeUniformWithConfiguration(12, 22, 2, TypedValue.COMPLEX_UNIT_SP); gravity = Gravity.END; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f) }
-        currentView = TextView(this).apply { text = if(currentInput.isEmpty()) "0" else currentInput; setTextColor(Color.WHITE); typeface = Typeface.create("sans-serif-light", Typeface.NORMAL); setAutoSizeTextTypeUniformWithConfiguration(18, 56, 2, TypedValue.COMPLEX_UNIT_SP); gravity = Gravity.END; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f) }
+        expressionView = TextView(this).apply { text = ""; setTextColor(if (isIosGlassMode) Color.parseColor("#B8C7D9") else Color.parseColor("#8A94A8")); setAutoSizeTextTypeUniformWithConfiguration(12, 22, 2, TypedValue.COMPLEX_UNIT_SP); gravity = Gravity.END; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f) }
+        currentView = TextView(this).apply {
+            text = if(currentInput.isEmpty()) "0" else currentInput
+            setTextColor(Color.WHITE)
+            typeface = if (isIosGlassMode) Typeface.create("sans-serif-medium", Typeface.BOLD) else Typeface.create("sans-serif-light", Typeface.NORMAL)
+            setAutoSizeTextTypeUniformWithConfiguration(18, 56, 2, TypedValue.COMPLEX_UNIT_SP)
+            gravity = Gravity.END
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 2f)
+            if (isIosGlassMode) setShadowLayer(8f, 0f, 2f, Color.argb(90, 0, 0, 0))
+        }
 
         displayCard.addView(memoryIndicator); displayCard.addView(expressionView); displayCard.addView(currentView)
         root.addView(displayCard, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if(isGrid5x7) 0.28f else 0.32f).apply { bottomMargin = dp(12f) })
@@ -424,9 +511,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     if (Math.abs(dx) > 50f && Math.abs(dx) > Math.abs(dy)) {
                         onEquationButtonClick("⌫")
                     } else if (dy > 50f && Math.abs(dy) > Math.abs(dx)) {
-                        val textToRead = if(currentInput.isEmpty() || currentInput == "0") "אפס" else currentInput
-                        tts?.speak(textToRead, TextToSpeech.QUEUE_FLUSH, null, null)
-                        Toast.makeText(this@MainActivity, "מקריא... 🔊", Toast.LENGTH_SHORT).show()
+                        if (isIosGlassMode && startY < v.height * 0.42f && historyList.isNotEmpty()) {
+                            showHistoryDialog()
+                        } else {
+                            val textToRead = if(currentInput.isEmpty() || currentInput == "0") "אפס" else currentInput
+                            tts?.speak(textToRead, TextToSpeech.QUEUE_FLUSH, null, null)
+                            Toast.makeText(this@MainActivity, if (isIosGlassMode) "מקריא תוצאה" else "מקריא... 🔊", Toast.LENGTH_SHORT).show()
+                        }
                     } else if (dy < -50f && Math.abs(dy) > Math.abs(dx)) {
                         feedback(v); startVoiceRecognition()
                     } else if (Math.abs(dx) < 10f && Math.abs(dy) < 10f) {
@@ -446,33 +537,58 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 val weight = if (!isGrid5x7 && symbol == "0") 2f else 1f
                 val btn = createAnimatedButton(symbol, isGrid5x7)
                 keypadButtons[symbol] = btn
-                rowLayout.addView(btn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, weight).apply { setMargins(dp(3f), dp(3f), dp(3f), dp(3f)) })
+                val marginDp = if (isIosGlassMode) 4.5f else 3f
+                rowLayout.addView(btn, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, weight).apply { setMargins(dp(marginDp), dp(marginDp), dp(marginDp), dp(marginDp)) })
             }
             keypad.addView(rowLayout, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
         }
         root.addView(keypad, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, if(isGrid5x7) 0.72f else 0.68f)); return root
     }
-        private fun createAnimatedButton(symbol: String, isSmall: Boolean): TextView {
-        val isMem = symbol in listOf("MC", "MR", "M+", "M-"); val isOp = symbol in listOf("÷", "×", "−", "+", "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e", "(", ")")
+    private fun createAnimatedButton(symbol: String, isSmall: Boolean): TextView {
+        val isMem = symbol in listOf("MC", "MR", "M+", "M-")
+        val isOp = symbol in listOf("÷", "×", "−", "+", "sin", "cos", "tan", "log", "ln", "√", "x²", "x³", "x^y", "!", "π", "e", "(", ")")
         val defaultBg = when { symbol == "AC" -> Utils.lightenColor(Color.RED, 0.2f); symbol == "=" -> primaryColor; isMem -> Utils.lightenColor(bgColor, 0.03f); symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> Utils.lightenColor(bgColor, 0.1f); else -> Utils.lightenColor(bgColor, 0.06f) }
         val strokeColor = if (symbol == "=" || symbol == "AC") Color.TRANSPARENT else Utils.lightenColor(bgColor, 0.15f)
         val textColor = if (isIosGlassMode) Color.WHITE else when { symbol == "AC" -> Color.WHITE; symbol == "=" -> Color.parseColor("#08090C"); isMem || symbol in listOf("⌫", "%", "÷", "×", "−", "+") -> primaryColor; else -> Color.WHITE }
         val shape = GradientDrawable().apply { this.shape = GradientDrawable.RECTANGLE; cornerRadius = dp(buttonCornerStyle).toFloat(); setColor(defaultBg); setStroke(dp(1.5f), strokeColor) }
-        val btnDrawable = if (isIosGlassMode) IosGlassTheme.createGlassButtonDrawable(this, symbol, isMem) else RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null)
+        val btnDrawable = if (isIosGlassMode) IosGlassTheme.createGlassButtonDrawable(this, symbol, isMem, false) else RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null)
+
         return TextView(this).apply {
-            text = symbol; setTextColor(textColor); setAutoSizeTextTypeUniformWithConfiguration(10, if(isSmall) 22 else 28, 2, TypedValue.COMPLEX_UNIT_SP); typeface = if (symbol == "=" || isOp || isMem) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif-medium", Typeface.NORMAL); gravity = Gravity.CENTER; background = btnDrawable; isClickable = true
+            text = symbol
+            setTextColor(textColor)
+            minimumWidth = dp(44f)
+            minimumHeight = dp(44f)
+            setPadding(dp(6f), dp(4f), dp(6f), dp(4f))
+            setAutoSizeTextTypeUniformWithConfiguration(10, if(isSmall) 21 else 27, 2, TypedValue.COMPLEX_UNIT_SP)
+            typeface = if (isIosGlassMode) Typeface.create("sans-serif-medium", Typeface.BOLD) else if (symbol == "=" || isOp || isMem) Typeface.DEFAULT_BOLD else Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            gravity = Gravity.CENTER
+            background = btnDrawable
+            isClickable = true
+
             if (isIosGlassMode) {
                 IosGlassTheme.apply3DElevation(this, 6f)
-                setShadowLayer(4f, 0f, 2f, Color.argb(110, 0, 0, 0))
+                IosGlassTheme.styleSymbolTextView(this, this@MainActivity, symbol, false)
             }
+
             setOnTouchListener { v, e ->
+                val tv = v as TextView
                 when (e.actionMasked) {
                     MotionEvent.ACTION_DOWN -> {
                         feedback(v, symbol)
-                        if (useAnimations) v.animate().scaleX(0.84f).scaleY(0.84f).setDuration(70).setInterpolator(DecelerateInterpolator()).start()
+                        if (isIosGlassMode) {
+                            tv.background = IosGlassTheme.createGlassButtonDrawable(this@MainActivity, symbol, isMem, true)
+                            IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, true)
+                            IosGlassTheme.apply3DElevation(tv, 2f)
+                        }
+                        if (useAnimations) v.animate().scaleX(if (isIosGlassMode) 0.91f else 0.84f).scaleY(if (isIosGlassMode) 0.91f else 0.84f).translationY(if (isIosGlassMode) dp(2f).toFloat() else 0f).setDuration(65).setInterpolator(DecelerateInterpolator()).start()
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        if (useAnimations) v.animate().scaleX(1f).scaleY(1f).setDuration(380).setInterpolator(OvershootInterpolator(2.5f)).start()
+                        if (isIosGlassMode) {
+                            tv.background = IosGlassTheme.createGlassButtonDrawable(this@MainActivity, symbol, isMem, false)
+                            IosGlassTheme.styleSymbolTextView(tv, this@MainActivity, symbol, false)
+                            IosGlassTheme.apply3DElevation(tv, 6f)
+                        }
+                        if (useAnimations) v.animate().scaleX(1f).scaleY(1f).translationY(0f).setDuration(360).setInterpolator(OvershootInterpolator(2.2f)).start()
                         if (e.actionMasked == MotionEvent.ACTION_UP) onEquationButtonClick(symbol)
                     }
                 }
@@ -480,7 +596,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
     }
-
     private fun onEquationButtonClick(s: String) {
         if (MiniGameEngine.isActive && MiniGameEngine.onKeyPress(this, s)) return
         if (justCalculated && s !in listOf("÷", "×", "−", "+", "^", "%")) { currentInput = ""; justCalculated = false }
@@ -533,7 +648,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val amountInput = createInputBox("הזן כמות להמרה...")
         val resCard = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER; setPadding(dp(20f), dp(22f), dp(20f), dp(22f))
-            background = if (isIosGlassMode) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 22f) else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.08f)); cornerRadius = dp(22f).toFloat(); setStroke(dp(1.5f), primaryColor) }
+            background = if (isIosGlassMode) IosGlassTheme.createGlassCardDrawable(this@MainActivity, IosGlassTheme.glassCornerPt) else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.08f)); cornerRadius = dp(22f).toFloat(); setStroke(dp(1.5f), primaryColor) }
             visibility = View.GONE
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = dp(16f) }
         }
@@ -600,7 +715,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         root.addView(fromBtn); root.addView(swapContainer); root.addView(toBtn); root.addView(amountInput); root.addView(calcBtn); root.addView(resCard)
         scroll.addView(root); return scroll
     }
-        fun createCurrencyCalculator(): View = createUniversalConverter(
+
+    fun createCurrencyCalculator(): View = createUniversalConverter(
         pickerTitle = "בחר מטבע",
         itemsProvider = { allCurrencies },
         getFrom = { fromCurrency },
@@ -645,21 +761,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             cb("${Utils.formatResult(res, calcPrecision)} ${t.substringBefore(" ")}", "יחס: 1 ${f.substringBefore(" ")} = ${Utils.formatResult(unitRate, 6)} ${t.substringBefore(" ")}")
         }
     }
-
-    fun createWeightCalculator(): View {
-        val units = mapOf(
-            "מיליגרם (mg)" to 1e-6, "גרם (g)" to 0.001, "קילוגרם (kg)" to 1.0, "טון מטרי (t)" to 1000.0,
-            "אונקיה (oz)" to 0.02834952, "פאונד (lbs)" to 0.45359237, "סטון (st)" to 6.350293,
-            "קראט (ct)" to 0.0002, "גריין (gr)" to 0.0000647989, "טון אמריקאי (US ton)" to 907.18474, "טון בריטי (UK ton)" to 1016.0469
-        )
-        return createUniversalConverter("בחר יחידת משקל", { units.keys.toList() }, { fromWeight }, { toWeight }, { f, t -> fromWeight = f; toWeight = t; savePreferences() }) { v, f, t, cb ->
-            val fFactor = units[f] ?: 1.0; val tFactor = units[t] ?: 1.0
-            val res = v * fFactor / tFactor; val unitRate = fFactor / tFactor
-            cb("${Utils.formatResult(res, calcPrecision)} ${t.substringBefore(" ")}", "יחס: 1 ${f.substringBefore(" ")} = ${Utils.formatResult(unitRate, 6)} ${t.substringBefore(" ")}")
-        }
-    }
-
-    fun createTempCalculator(): View {
+      fun createTempCalculator(): View {
         val units = listOf("צלזיוס (°C)", "פרנהייט (°F)", "קלווין (K)", "רנקין (°R)", "דליל (°De)", "ניוטון (°N)", "ראומיר (°Ré)", "רומר (°Rø)")
         fun toCelsius(v: Double, u: String): Double = when (u) {
             "פרנהייט (°F)" -> (v - 32.0) * 5.0 / 9.0
@@ -716,14 +818,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val futureValue = if (r == 0.0) p + pmt * months else p * (1 + r).pow(months) + pmt * (((1 + r).pow(months) - 1) / r)
             val totalDeposited = p + pmt * months
             val profit = futureValue - totalDeposited
-            resTv.text = "💰 סך הכל חיסכון עתידי:\n₪${Utils.formatResult(futureValue, 2)}\n\n📥 סך הפקדות (קרן): ₪${Utils.formatResult(totalDeposited, 2)}\n✨ רווח נקי מריבית: ₪${Utils.formatResult(profit, 2)}"
+            resTv.text = if (isIosGlassMode) {
+                "סך הכל חיסכון עתידי:\n₪${Utils.formatResult(futureValue, 2)}\n\nסך הפקדות (קרן): ₪${Utils.formatResult(totalDeposited, 2)}\nרווח נקי מריבית: ₪${Utils.formatResult(profit, 2)}"
+            } else {
+                "💰 סך הכל חיסכון עתידי:\n₪${Utils.formatResult(futureValue, 2)}\n\n📥 סך הפקדות (קרן): ₪${Utils.formatResult(totalDeposited, 2)}\n✨ רווח נקי מריבית: ₪${Utils.formatResult(profit, 2)}"
+            }
         }
         root.addView(initialIn); root.addView(monthlyIn); root.addView(rateIn); root.addView(yearsIn); root.addView(btn); root.addView(resTv)
         scroll.addView(root); return scroll
     }
 
     fun createInputBox(hintText: String): EditText { return EditText(this).apply { hint = hintText; setHintTextColor(if (isIosGlassMode) Color.parseColor("#B0BEC5") else Color.parseColor("#5C657A")); setTextColor(Color.WHITE); inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED; textSize = 17f; setPadding(dp(18f), dp(18f), dp(18f), dp(18f)); background = if (isIosGlassMode) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 16f) else GradientDrawable().apply { setColor(Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(16f).toFloat(); setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f)) }; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(14f) } } }
-    fun createActionBtn(textStr: String, isPrimary: Boolean = true, onClick: (View) -> Unit): TextView { val shape = GradientDrawable().apply { setColor(if (isPrimary) primaryColor else Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(buttonCornerStyle).toFloat(); if (!isPrimary) setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f)) }; val bgDraw = if (isIosGlassMode) IosGlassTheme.createGlassButtonDrawable(this, if (isPrimary) "=" else "0", false) else RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null); return TextView(this).apply { text = textStr; gravity = Gravity.CENTER; setTextColor(if (isPrimary && !isIosGlassMode) Color.parseColor("#08090C") else Color.WHITE); textSize = 15f; typeface = Typeface.DEFAULT_BOLD; background = bgDraw; setPadding(dp(12f), dp(16f), dp(12f), dp(16f)); layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10f) }; isClickable = true; if (isIosGlassMode) IosGlassTheme.apply3DElevation(this, 5f); setOnClickListener { feedback(it); onClick(it) } } }
+    fun createActionBtn(textStr: String, isPrimary: Boolean = true, onClick: (View) -> Unit): TextView { val cleanText = IosGlassTheme.cleanCategoryTitle(textStr, isIosGlassMode); val shape = GradientDrawable().apply { setColor(if (isPrimary) primaryColor else Utils.lightenColor(bgColor, 0.06f)); cornerRadius = dp(buttonCornerStyle).toFloat(); if (!isPrimary) setStroke(dp(1.5f), Utils.lightenColor(bgColor, 0.15f)) }; val bgDraw = if (isIosGlassMode) IosGlassTheme.createGlassButtonDrawable(this, if (isPrimary) "=" else "0", false) else RippleDrawable(ColorStateList.valueOf(Color.parseColor("#33FFFFFF")), shape, null); return TextView(this).apply { text = cleanText; gravity = Gravity.CENTER; setTextColor(if (isPrimary && !isIosGlassMode) Color.parseColor("#08090C") else Color.WHITE); textSize = 15f; typeface = Typeface.DEFAULT_BOLD; background = bgDraw; setPadding(dp(12f), dp(16f), dp(12f), dp(16f)); layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10f) }; isClickable = true; if (isIosGlassMode) IosGlassTheme.apply3DElevation(this, 5f); setOnClickListener { feedback(it); onClick(it) } } }
     fun createResultTextView(): TextView = TextView(this).apply { setTextColor(Color.WHITE); textSize = 20f; gravity = Gravity.CENTER; setPadding(0, dp(20f), 0, 0); setOnClickListener { if (text.isNotEmpty()) copyToClipboard(text.toString()) } }
 
     override fun onDestroy() { tts?.shutdown(); soundPool.release(); super.onDestroy() }
@@ -745,8 +851,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         try { startActivityForResult(intent, VOICE_REQUEST_CODE) }
         catch (e: Exception) { Toast.makeText(this, "זיהוי קולי לא נתמך במכשיר זה", Toast.LENGTH_SHORT).show() }
     }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+      override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == VOICE_REQUEST_CODE && resultCode == RESULT_OK) {
             val matches = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
