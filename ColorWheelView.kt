@@ -153,7 +153,12 @@ fun createColorWheelPicker(context: Context, initialColor: Int, onColorChanged: 
         gravity = Gravity.CENTER_VERTICAL
         compoundDrawablePadding = dpLocal(8f)
         if (isCleanGlass) {
-            val sunIcon = AuroraBorealisTheme.createVectorIcon(context, 202, accentTint, 18f, act?.isAuroraMode == true)
+            // התיקון שבוצע: שימוש באובייקט הנכון (AuroraBorealisTheme) לפי המצב שפועל.
+            val sunIcon = if (act?.isAuroraMode == true) {
+                AuroraBorealisTheme.createAuroraVectorIcon(context, 202, accentTint, 18f)
+            } else {
+                IosGlassTheme.createSfSymbolDrawable(context, 202, accentTint, 18f)
+            }
             setCompoundDrawables(null, null, sunIcon, null)
         }
     }
@@ -180,7 +185,12 @@ fun createColorWheelPicker(context: Context, initialColor: Int, onColorChanged: 
         gravity = Gravity.CENTER_VERTICAL
         compoundDrawablePadding = dpLocal(8f)
         if (isCleanGlass) {
-            val dropIcon = AuroraBorealisTheme.createVectorIcon(context, 203, accentTint, 18f, act?.isAuroraMode == true)
+            // התיקון שבוצע: שימוש באובייקט הנכון (AuroraBorealisTheme) לפי המצב שפועל.
+            val dropIcon = if (act?.isAuroraMode == true) {
+                AuroraBorealisTheme.createAuroraVectorIcon(context, 203, accentTint, 18f)
+            } else {
+                IosGlassTheme.createSfSymbolDrawable(context, 203, accentTint, 18f)
+            }
             setCompoundDrawables(null, null, dropIcon, null)
         }
     }
