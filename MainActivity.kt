@@ -164,7 +164,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
             drawerItemsViews.add(item); drawerMenu?.addView(item)
 
-            // 1px ultra-thin specular / emerald separator line
             val sep = View(this).apply {
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(1f)).apply {
                     setMargins(dp(22f), 0, dp(22f), 0)
@@ -266,7 +265,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun handleIntent(intent: Intent?) { when (intent?.action) { "ACTION_CALC" -> { currentTabIndex = 0; applyTheme() }; "ACTION_SCI" -> { currentTabIndex = 1; applyTheme() }; "ACTION_COIN" -> { currentTabIndex = 13; applyTheme() }; else -> applyTheme() } }
     private fun setupShortcuts() { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) { val sm = getSystemService(ShortcutManager::class.java); val s1 = ShortcutInfo.Builder(this, "coin").setShortLabel("מטבעות").setIcon(Icon.createWithResource(this, android.R.drawable.star_on)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_COIN" }).build(); val s2 = ShortcutInfo.Builder(this, "sci").setShortLabel("מדעית").setIcon(Icon.createWithResource(this, android.R.drawable.ic_menu_edit)).setIntent(Intent(this, MainActivity::class.java).apply { action = "ACTION_SCI" }).build(); sm.dynamicShortcuts = listOf(s1, s2) } }
 
-    // תמיכה בסיבוב מסך אופקי (Portrait to Landscape Morphing - Liquid Fusion 350ms)
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         updateHandednessLayout()
@@ -325,9 +323,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             drawerMenu?.background = AuroraBorealisTheme.createAuroraCardDrawable(this, 0f, isDrawer = true)
             val iconCol = AuroraBorealisTheme.AURORA_PRIMARY
             pipBtn.text = ""
-            pipBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 100, iconCol, 22f, true), null, null, null)
+            pipBtn.setCompoundDrawables(AuroraBorealisTheme.createAuroraVectorIcon(this, 100, iconCol, 22f), null, null, null)
             historyBtn.text = ""
-            historyBtn.setCompoundDrawables(AuroraBorealisTheme.createVectorIcon(this, 101, iconCol, 22f, true), null, null, null)
+            historyBtn.setCompoundDrawables(AuroraBorealisTheme.createAuroraVectorIcon(this, 101, iconCol, 22f), null, null, null)
         } else if (isIosGlassMode) {
             mainContent?.background = IosGlassTheme.createLiquidAmbientBackground(this)
             drawerMenu?.background = IosGlassTheme.createGlassCardDrawable(this, 0f)
@@ -384,7 +382,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     fun copyToClipboard(text: String) { val cb = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; cb.setPrimaryClip(ClipData.newPlainText("CalcResult", text)); Toast.makeText(this, if (isCleanGlassActive) "הועתק ללוח" else "הועתק ללוח 📋", Toast.LENGTH_SHORT).show() }
 
-    // חלון היסטוריית חישובים מעוצב בזכוכית מלאה עם קווי הפרדה ואייקון וקטורי
     private fun showHistoryDialog() {
         if (historyList.isEmpty()) { Toast.makeText(this, "היסטוריית החישובים ריקה", Toast.LENGTH_SHORT).show(); return }
         val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
@@ -397,7 +394,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             else GradientDrawable().apply {
                 setColor(Utils.lightenColor(bgColor, 0.06f))
                 cornerRadius = dp(24f).toFloat()
-                setStroke(dp(1f), Utils.lightenColor(bgColor, 0.16f))
             }
         }
 
@@ -414,7 +410,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
             compoundDrawablePadding = dp(10f)
             if (isCleanGlassActive) {
-                val histIcon = AuroraBorealisTheme.createVectorIcon(this@MainActivity, 101, activeAccent, 22f, isAuroraMode)
+                val histIcon = if (isAuroraMode) AuroraBorealisTheme.createAuroraVectorIcon(this@MainActivity, 101, activeAccent, 22f) else IosGlassTheme.createSfSymbolDrawable(this@MainActivity, 101, activeAccent, 22f)
                 setCompoundDrawables(null, null, histIcon, null)
             }
         }
@@ -476,7 +472,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         dialog.show()
     }
 
-    // חלון בחירת מטבע / יחידות בעיצוב זכוכית מלא עם אייקון חיפוש וקטורי
     fun showItemPicker(title: String, items: List<String>, onSelected: (String) -> Unit) {
         val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
         if (isCleanGlassActive) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
@@ -509,14 +504,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             compoundDrawablePadding = dp(10f)
             setPadding(dp(14f), dp(12f), dp(14f), dp(12f))
             if (isCleanGlassActive) {
-                val searchIcon = AuroraBorealisTheme.createVectorIcon(this@MainActivity, 200, activeAccent, 18f, isAuroraMode)
+                val searchIcon = if (isAuroraMode) AuroraBorealisTheme.createAuroraVectorIcon(this@MainActivity, 200, activeAccent, 18f) else IosGlassTheme.createSfSymbolDrawable(this@MainActivity, 200, activeAccent, 18f)
                 setCompoundDrawables(searchIcon, null, null, null)
             }
             background = if (isCleanGlassActive) IosGlassTheme.createGlassCardDrawable(this@MainActivity, 16f)
             else GradientDrawable().apply {
                 setColor(bgColor)
                 cornerRadius = dp(12f).toFloat()
-                setStroke(dp(1f), Utils.lightenColor(bgColor, 0.15f))
             }
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(12f) }
         }
@@ -551,7 +545,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         populateList(""); dialogView.addView(searchInput); dialogView.addView(scrollView); dialog.show()
     }
 
-    // חלון בחירת צליל בעיצוב זכוכית עם אייקוני גלי-קול וקטוריים מוארים (ללא אימוג'ים)
     fun showGlassSoundPickerDialog(onSoundChanged: () -> Unit = {}) {
         val activeAccent = if (isAuroraMode) AuroraBorealisTheme.AURORA_PRIMARY else primaryColor
         if (isCleanGlassActive) IosGlassTheme.applyRealtimeGlassBlur(mainContent, true)
@@ -620,7 +613,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 compoundDrawablePadding = dp(10f)
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                 if (isCleanGlassActive) {
-                    val soundVec = AuroraBorealisTheme.createVectorIcon(this@MainActivity, 201, if (isSelected) activeAccent else Color.WHITE, 20f, isAuroraMode)
+                    val soundVec = if (isAuroraMode) AuroraBorealisTheme.createAuroraVectorIcon(this@MainActivity, 201, if (isSelected) activeAccent else Color.WHITE, 20f) else IosGlassTheme.createSfSymbolDrawable(this@MainActivity, 201, if (isSelected) activeAccent else Color.WHITE, 20f)
                     setCompoundDrawables(null, null, soundVec, null)
                 }
             }
@@ -640,8 +633,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun updateDrawerSelection() {
         val sepColor = when {
-            isAuroraMode -> Color.argb(38, 0, 245, 212) // 1px glowing emerald line
-            isIosGlassMode -> Color.argb(28, 255, 255, 255) // 1px specular line
+            isAuroraMode -> Color.argb(38, 0, 245, 212)
+            isIosGlassMode -> Color.argb(28, 255, 255, 255)
             else -> Color.TRANSPARENT
         }
         for (sep in drawerSeparators) sep.setBackgroundColor(sepColor)
@@ -653,7 +646,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val tint = if (isSelected) activeAccent else Color.WHITE
             tv.text = IosGlassTheme.cleanCategoryTitle(categories[i], isCleanGlassActive)
             if (isCleanGlassActive) {
-                val icon = AuroraBorealisTheme.createVectorIcon(this, i, tint, 22f, isAuroraMode)
+                val icon = if (isAuroraMode) AuroraBorealisTheme.createAuroraVectorIcon(this, i, tint, 22f) else IosGlassTheme.createSfSymbolDrawable(this, i, tint, 22f)
                 if (isRightHanded) tv.setCompoundDrawables(null, null, icon, null)
                 else tv.setCompoundDrawables(icon, null, null, null)
             } else {
@@ -673,7 +666,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // מעדכן באופן אוטומטי את השמות במסך ההגדרות (למניעת הפרת זכויות יוצרים על השם iOS) ומוסיף אייקונים ודיאלוג צלילים מזכוכית
     private fun enhanceSettingsHierarchy(root: View) {
         when (root) {
             is TextView -> {
@@ -686,7 +678,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
                 if (updated != raw) root.text = updated
 
-                // הפיכת כפתור בחירת הצליל לפתיחת דיאלוג הזכוכית החדש
                 if (raw.contains("בחר צליל") || raw.contains("צליל מקשים") || raw.contains("סוג צליל")) {
                     root.setOnClickListener {
                         feedback(it)
@@ -726,21 +717,109 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 currentSettingsScroll = scrollObj
                 val container = scrollObj?.getChildAt(0) as? LinearLayout ?: (settingsView as? LinearLayout)
 
-                // כפתור ייעודי להפעלת ערכת הנושא החדשה Aurora Borealis (זוהר הצפון)
-                val auroraBtn = createActionBtn(
-                    "ערכת נושא: ${IosGlassTheme.AURORA_THEME_NAME} (${if (isAuroraMode) "פעיל" else "כבוי"})",
-                    isAuroraMode
+                // הוספת לחצנים הדדיים השולטים שלא יהיו שני מצבים פעילים ביחד
+                val liquidGlassBtn = createActionBtn(
+                    "עיצוב: ${IosGlassTheme.LIQUID_GLASS_THEME_NAME} (${if (isIosGlassMode && !isAuroraMode) "פעיל" else "כבוי"})",
+                    isIosGlassMode && !isAuroraMode
                 ) {
-                    isAuroraMode = !isAuroraMode
-                    if (isAuroraMode) {
-                        isIosGlassMode = true
-                        primaryColor = AuroraBorealisTheme.AURORA_PRIMARY
-                        bgColor = AuroraBorealisTheme.ARCTIC_BLUE
-                    }
+                    isIosGlassMode = true
+                    isAuroraMode = false // כיבוי אוטומטי של זוהר הצפון
                     savePreferences()
                     applyTheme()
+                    switchTab(19)
                 }
-                container?.addView(auroraBtn, 0)
+
+                val auroraBtn = createActionBtn(
+                    "עיצוב: ${IosGlassTheme.AURORA_THEME_NAME} (${if (isAuroraMode) "פעיל" else "כבוי"})",
+                    isAuroraMode
+                ) {
+                    isAuroraMode = true
+                    isIosGlassMode = false // כיבוי אוטומטי של זכוכית פרו
+                    primaryColor = AuroraBorealisTheme.AURORA_PRIMARY
+                    bgColor = AuroraBorealisTheme.ARCTIC_BLUE
+                    savePreferences()
+                    applyTheme()
+                    switchTab(19)
+                }
+
+                container?.addView(liquidGlassBtn, 0)
+                container?.addView(auroraBtn, 1)
+
+                // הוספת פקדי התאמה אישית מלאים למצב Aurora Borealis בהגדרות
+                if (isAuroraMode) {
+                    val auroraSettingsCard = LinearLayout(this).apply {
+                        orientation = LinearLayout.VERTICAL
+                        setPadding(dp(16f), dp(16f), dp(16f), dp(16f))
+                        background = IosGlassTheme.createGlassCardDrawable(this@MainActivity, 20f)
+                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                            setMargins(0, dp(12f), 0, dp(12f))
+                        }
+                    }
+                    val headerLabel = TextView(this).apply {
+                        text = "התאמה אישית - זוהר הצפון"
+                        setTextColor(AuroraBorealisTheme.AURORA_PRIMARY)
+                        textSize = 16f
+                        typeface = Typeface.DEFAULT_BOLD
+                        setPadding(0, 0, 0, dp(10f))
+                    }
+                    auroraSettingsCard.addView(headerLabel)
+
+                    // בקרת שקיפות
+                    val opLabel = TextView(this).apply { text = "שקיפות זכוכית: ${AuroraBorealisTheme.auroraOpacity}"; setTextColor(Color.WHITE); textSize = 13f }
+                    val opSeek = SeekBar(this).apply {
+                        max = 245; progress = AuroraBorealisTheme.auroraOpacity
+                        setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                            override fun onProgressChanged(s: SeekBar?, p: Int, u: Boolean) {
+                                AuroraBorealisTheme.auroraOpacity = p.coerceAtLeast(80)
+                                opLabel.text = "שקיפות זכוכית: ${AuroraBorealisTheme.auroraOpacity}"
+                                if (u) { savePreferences(); applyTheme() }
+                            }
+                            override fun onStartTrackingTouch(s: SeekBar?) {}
+                            override fun onStopTrackingTouch(s: SeekBar?) {}
+                        })
+                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10f) }
+                    }
+                    auroraSettingsCard.addView(opLabel)
+                    auroraSettingsCard.addView(opSeek)
+
+                    // בקרת עוצמת הילה (Glow)
+                    val glowLabel = TextView(this).apply { text = "עוצמת הארת פולימר: ${AuroraBorealisTheme.auroraGlowIntensity}"; setTextColor(Color.WHITE); textSize = 13f }
+                    val glowSeek = SeekBar(this).apply {
+                        max = 255; progress = AuroraBorealisTheme.auroraGlowIntensity
+                        setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                            override fun onProgressChanged(s: SeekBar?, p: Int, u: Boolean) {
+                                AuroraBorealisTheme.auroraGlowIntensity = p.coerceAtLeast(50)
+                                glowLabel.text = "עוצמת הארת פולימר: ${AuroraBorealisTheme.auroraGlowIntensity}"
+                                if (u) { savePreferences() }
+                            }
+                            override fun onStartTrackingTouch(s: SeekBar?) {}
+                            override fun onStopTrackingTouch(s: SeekBar?) {}
+                        })
+                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10f) }
+                    }
+                    auroraSettingsCard.addView(glowLabel)
+                    auroraSettingsCard.addView(glowSeek)
+
+                    // בקרת רדיוס קמירות
+                    val radLabel = TextView(this).apply { text = "רדיוס קמירות מקשים: ${AuroraBorealisTheme.auroraCornerPt.toInt()}pt"; setTextColor(Color.WHITE); textSize = 13f }
+                    val radSeek = SeekBar(this).apply {
+                        max = 40; progress = AuroraBorealisTheme.auroraCornerPt.toInt()
+                        setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                            override fun onProgressChanged(s: SeekBar?, p: Int, u: Boolean) {
+                                AuroraBorealisTheme.auroraCornerPt = p.toFloat().coerceAtLeast(8f)
+                                radLabel.text = "רדיוס קמירות מקשים: ${AuroraBorealisTheme.auroraCornerPt.toInt()}pt"
+                                if (u) { savePreferences(); applyTheme() }
+                            }
+                            override fun onStartTrackingTouch(s: SeekBar?) {}
+                            override fun onStopTrackingTouch(s: SeekBar?) {}
+                        })
+                        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { bottomMargin = dp(10f) }
+                    }
+                    auroraSettingsCard.addView(radLabel)
+                    auroraSettingsCard.addView(radSeek)
+
+                    container?.addView(auroraSettingsCard, 2)
+                }
 
                 val handLabel = if (isCleanGlassActive) {
                     "יד דומיננטית: ${if (isRightHanded) "ימניים (תפריט ופעולות בימין)" else "שמאליים (תפריט ופעולות בשמאל)"}"
