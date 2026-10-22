@@ -120,11 +120,11 @@ object IosGlassTheme {
 
         val opColor = if (useClassicOrangeOps) Color.parseColor("#FF9F0A") else activity.primaryColor
         val alphaScale = (glassOpacity / 255f).coerceIn(0.25f, 1f)
-        val pressBoost = if (isPressed) 55 else 0
+        val pressBoost = if (isPressed) 50 else 0
 
         val (topColor, bottomColor) = when {
             isOperator -> {
-                val aTop = ((215 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
+                val aTop = ((220 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
                 val aBot = ((165 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
                 val r = (Color.red(opColor) + if (isPressed) 35 else 20).coerceAtMost(255)
                 val g = (Color.green(opColor) + if (isPressed) 35 else 15).coerceAtMost(255)
@@ -137,27 +137,39 @@ object IosGlassTheme {
                 Color.argb(aTop, 210, 218, 230) to Color.argb(aBot, 145, 155, 170)
             }
             else -> {
-                val aTop = ((105 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
-                val aBot = ((65 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
+                val aTop = ((110 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
+                val aBot = ((70 * alphaScale).toInt() + pressBoost).coerceAtMost(255)
                 Color.argb(aTop, 72, 82, 102) to Color.argb(aBot, 38, 44, 58)
             }
         }
 
+        // 1. צל עומק תחתון
         val ambientShadow = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
             setColor(Color.argb(if (isPressed) 45 else 110, 0, 0, 0))
         }
 
-        // ללא מסגרת לבנה חיצונית במצב זכוכית
+        // 2. גוף הזכוכית הנוזלית
         val glassBody = GradientDrawable(
             GradientDrawable.Orientation.TOP_BOTTOM,
             intArrayOf(topColor, bottomColor)
         ).apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
+            setStroke(activity.dp(1f), Color.argb(75, 255, 255, 255))
         }
 
+        // 3. הברקת זכוכית עליונה קמורה (מחזירה את הנפח והריאליזם לכפתור)
+        val topGloss = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(Color.argb(125, 255, 255, 255), Color.argb(0, 255, 255, 255))
+        ).apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadii = floatArrayOf(radius, radius, radius, radius, radius * 0.35f, radius * 0.35f, radius * 0.35f, radius * 0.35f)
+        }
+
+        // 4. ליבת הארה פנימית בלחיצה
         val innerCoreGlow = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = radius
@@ -167,15 +179,17 @@ object IosGlassTheme {
             colors = intArrayOf(Color.argb(glowAlpha, 255, 255, 255), Color.TRANSPARENT)
         }
 
-        val layers = LayerDrawable(arrayOf(ambientShadow, glassBody, innerCoreGlow)).apply {
-            setLayerInset(1, 0, 0, 0, if (isPressed) activity.dp(1f) else activity.dp(2.5f))
-            setLayerInset(2, activity.dp(1f), activity.dp(1f), activity.dp(1f), activity.dp(19f))
+        val layers = LayerDrawable(arrayOf(ambientShadow, glassBody, innerCoreGlow, topGloss)).apply {
+            val bottomInset = if (isPressed) activity.dp(1f) else activity.dp(2.5f)
+            setLayerInset(1, 0, 0, 0, bottomInset)
+            setLayerInset(2, activity.dp(1f), activity.dp(1f), activity.dp(1f), bottomInset + activity.dp(1f))
+            setLayerInset(3, activity.dp(2f), activity.dp(1.5f), activity.dp(2f), activity.dp(22f))
         }
 
         return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#66FFFFFF")), layers, null)
     }
 
-    // ללא מסגרת לבנה חיצונית גם בכרטיסים, דיאלוגים ובתפריט הצד
+    // תפריט צד וכרטיסים – ללא מסגרת לבנה חיצונית
     fun createGlassCardDrawable(activity: MainActivity, cornerDp: Float = glassCornerPt): Drawable {
         if (activity.isAuroraMode) {
             return AuroraBorealisTheme.createAuroraCardDrawable(activity, cornerDp, cornerDp == 0f)
