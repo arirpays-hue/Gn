@@ -16,14 +16,18 @@ import android.widget.TextView
 
 object IosGlassTheme {
 
-    // --- פרמטרים להתאמה אישית של iOS 26 Liquid Glass ---
+    // שמות רשמיים מוגנים מזכויות יוצרים (ללא שימוש בסימן המסחרי iOS)
+    const val LIQUID_GLASS_THEME_NAME = "Liquid Glass Pro"
+    const val AURORA_THEME_NAME = "Aurora Borealis (זוהר הצפון)"
+
+    // --- פרמטרים להתאמה אישית של Liquid Glass Pro ---
     var glassOpacity: Int = 185          // 75..245 שקיפות הזכוכית
     var glassBlurRadius: Float = 28f     // 0..50 עוצמת טשטוש
     var specularIntensity: Int = 210     // 40..255 עוצמת פס ההברקה העליון (1px Specular)
     var glassCornerPt: Float = 24f       // רדיוס פינות הזכוכית (ברירת מחדל 24pt)
     var symbolDepthMode: Int = 0         // 0 = חרוט בזכוכית (Etched), 1 = מרחף 1 מ"מ (Floating)
     var pressGlowIntensity: Int = 220    // עוצמת הארת הפולימר בלחיצה
-    var useClassicOrangeOps: Boolean = true // שימוש בכתום נוזלי של אפל לפעולות או בצבע הנושא
+    var useClassicOrangeOps: Boolean = true // שימוש בכתום נוזלי לפעולות או בצבע הנושא
 
     fun loadIosPrefs(prefs: SharedPreferences?) {
         if (prefs == null) return
@@ -34,9 +38,11 @@ object IosGlassTheme {
         symbolDepthMode = prefs.getInt("ios_symbolDepthMode", 0)
         pressGlowIntensity = prefs.getInt("ios_pressGlowIntensity", 220)
         useClassicOrangeOps = prefs.getBoolean("ios_useClassicOrangeOps", true)
+        AuroraBorealisTheme.loadAuroraPrefs(prefs)
     }
 
     fun saveIosPrefs(prefs: SharedPreferences?) {
+        AuroraBorealisTheme.saveAuroraPrefs(prefs)
         prefs?.edit()
             ?.putInt("ios_glassOpacity", glassOpacity)
             ?.putFloat("ios_glassBlurRadius", glassBlurRadius)
@@ -48,15 +54,15 @@ object IosGlassTheme {
             ?.apply()
     }
 
-    // מסיר אימוג'ים משמות המחשבונים והכפתורים במצב iOS ומשאיר טקסט נקי בלבד
-    fun cleanCategoryTitle(rawTitle: String, isIosMode: Boolean): String {
-        if (!isIosMode) return rawTitle
+    // מסיר אימוג'ים משמות המחשבונים והכפתורים במצב זכוכית ומשאיר טקסט נקי בלבד
+    fun cleanCategoryTitle(rawTitle: String, isCleanMode: Boolean): String {
+        if (!isCleanMode) return rawTitle
         return rawTitle.replace(Regex("[\\p{So}\\p{Cn}]"), "").trim()
     }
 
     // עיצוב טקסט מתמטי בסגנון SF Symbols 6 (כולל הטיה אלגנטית לפונקציות מדעיות ומשתנים)
-    fun formatSymbolText(symbol: String, isIosMode: Boolean): CharSequence {
-        if (!isIosMode) return symbol
+    fun formatSymbolText(symbol: String, isCleanMode: Boolean): CharSequence {
+        if (!isCleanMode) return symbol
         val displaySym = when (symbol) {
             "⌫" -> "⌫"
             "-" -> "−"
@@ -72,6 +78,10 @@ object IosGlassTheme {
 
     // החלת עיצוב טיפוגרפי, הילה ניאונית 5% והצללת עומק לסמל בתוך הכפתור
     fun styleSymbolTextView(tv: TextView, activity: MainActivity, symbol: String, isPressed: Boolean = false) {
+        if (activity.isAuroraMode) {
+            AuroraBorealisTheme.styleAuroraSymbol(tv, symbol, isPressed)
+            return
+        }
         if (!activity.isIosGlassMode) return
         val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%", "MC", "MR", "M+", "M-")
@@ -99,13 +109,17 @@ object IosGlassTheme {
             }
         }
     }
-        // יצירת כפתור Liquid Glass של iOS 26 (כולל מצב רגיל ומצב לחוץ מואר)
+
+    // יצירת כפתור Liquid Glass Pro (או Aurora Borealis כשמופעל)
     fun createGlassButtonDrawable(
         activity: MainActivity,
         symbol: String,
         isMem: Boolean,
         isPressed: Boolean = false
     ): Drawable {
+        if (activity.isAuroraMode) {
+            return AuroraBorealisTheme.createAuroraButtonDrawable(activity, symbol, isMem, isPressed)
+        }
         val radius = activity.dp(glassCornerPt).toFloat()
         val isOperator = symbol in listOf("÷", "×", "−", "+", "=")
         val isCommand = symbol in listOf("AC", "⌫", "%") || isMem
@@ -186,16 +200,19 @@ object IosGlassTheme {
         return RippleDrawable(ColorStateList.valueOf(Color.parseColor("#66FFFFFF")), layers, null)
     }
 
-    // משטח Display Canvas ו-Glass Cards עם שבירת אור
+    // משטח Display Canvas, תפריטים ודיאלוגים עם שבירת אור
     fun createGlassCardDrawable(activity: MainActivity, cornerDp: Float = glassCornerPt): Drawable {
+        if (activity.isAuroraMode) {
+            return AuroraBorealisTheme.createAuroraCardDrawable(activity, cornerDp, cornerDp == 0f)
+        }
         val radius = activity.dp(cornerDp).toFloat()
         val alphaScale = (glassOpacity / 255f).coerceIn(0.25f, 1f)
         val glass = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(
-                Color.argb((85 * alphaScale).toInt(), 90, 105, 130),
-                Color.argb((45 * alphaScale).toInt(), 45, 55, 75),
-                Color.argb((65 * alphaScale).toInt(), Color.red(activity.primaryColor) / 2, Color.green(activity.primaryColor) / 2, Color.blue(activity.primaryColor) / 2)
+                Color.argb((185 * alphaScale).toInt().coerceAtLeast(135), 42, 50, 66),
+                Color.argb((165 * alphaScale).toInt().coerceAtLeast(120), 24, 30, 44),
+                Color.argb((150 * alphaScale).toInt().coerceAtLeast(110), Color.red(activity.primaryColor) / 3, Color.green(activity.primaryColor) / 3, Color.blue(activity.primaryColor) / 3)
             )
         ).apply {
             cornerRadius = radius
@@ -211,8 +228,12 @@ object IosGlassTheme {
             setLayerInset(1, activity.dp(1.5f), activity.dp(1f), activity.dp(1.5f), activity.dp(24f))
         }
     }
-        // רקע אווירתי של iOS 26 שמאפשר לאור להשתקף מבעד למקשי הזכוכית
+
+    // רקע אווירתי של Liquid Glass Pro שמאפשר לאור להשתקף מבעד למקשי הזכוכית
     fun createLiquidAmbientBackground(activity: MainActivity): Drawable {
+        if (activity.isAuroraMode) {
+            return AuroraBorealisTheme.createAuroraAtmosphericBackground()
+        }
         val opCol = if (useClassicOrangeOps) Color.parseColor("#FF9F0A") else activity.primaryColor
         val baseBg = activity.bgColor
         val topGlow = Color.argb(
@@ -240,13 +261,14 @@ object IosGlassTheme {
         }
     }
 
-    // החלת טשטוש זכוכית אמיתי (backdrop-filter blur) על המסך כאשר התפריט נפתח
+    // החלת טשטוש זכוכית אמיתי (backdrop-filter blur) על המסך כאשר התפריט או דיאלוג נפתחים
     fun applyRealtimeGlassBlur(targetView: View?, enable: Boolean) {
         if (targetView == null) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (enable && glassBlurRadius > 1f) {
+            val radius = glassBlurRadius.coerceAtLeast(25f)
+            if (enable && radius > 1f) {
                 targetView.setRenderEffect(
-                    RenderEffect.createBlurEffect(glassBlurRadius, glassBlurRadius, Shader.TileMode.MIRROR)
+                    RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.MIRROR)
                 )
             } else {
                 targetView.setRenderEffect(null)
@@ -314,7 +336,7 @@ object IosGlassTheme {
                         canvas.drawLine(cx - r * 0.35f, cy - r * 0.3f, cx + r * 0.35f, cy - r * 0.3f, paint)
                         canvas.drawLine(cx - r * 0.35f, cy + r * 0.2f, cx + r * 0.15f, cy + r * 0.2f, paint)
                     }
-                                        3 -> { // הלוואה
+                    3 -> { // הלוואה
                         val path = Path().apply {
                             moveTo(cx - r * 0.8f, cy - r * 0.25f); lineTo(cx, cy - r * 0.8f); lineTo(cx + r * 0.8f, cy - r * 0.25f); close()
                         }
@@ -442,3 +464,4 @@ object IosGlassTheme {
         }
     }
 }
+ 
