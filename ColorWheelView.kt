@@ -21,10 +21,10 @@ class ColorWheelView(
 
     private val wheelPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val dimPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val selPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { 
+    private val selPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 3f * context.resources.displayMetrics.density
-        color = Color.WHITE 
+        color = Color.WHITE
     }
     private val selFillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
     private var cx = 0f; private var cy = 0f; private var r = 0f
@@ -77,6 +77,9 @@ class ColorWheelView(
 
 fun createColorWheelPicker(context: Context, initialColor: Int, onColorChanged: (Int) -> Unit): View {
     fun dpLocal(v: Float): Int = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, context.resources.displayMetrics).toInt()
+    val act = context as? MainActivity
+    val isCleanGlass = act?.isCleanGlassActive == true
+    val accentTint = if (act?.isAuroraMode == true) AuroraBorealisTheme.AURORA_PRIMARY else (act?.primaryColor ?: Color.WHITE)
 
     val hsv = FloatArray(3)
     Color.colorToHSV(initialColor, hsv)
@@ -86,10 +89,15 @@ fun createColorWheelPicker(context: Context, initialColor: Int, onColorChanged: 
         orientation = LinearLayout.VERTICAL
         gravity = Gravity.CENTER_HORIZONTAL
         setPadding(dpLocal(16f), dpLocal(16f), dpLocal(16f), dpLocal(16f))
-        background = GradientDrawable().apply {
-            setColor(Utils.lightenColor(initialColor, 0.06f))
-            cornerRadius = dpLocal(24f).toFloat()
+        background = if (act != null && isCleanGlass) {
+            IosGlassTheme.createGlassCardDrawable(act, 24f)
+        } else {
+            GradientDrawable().apply {
+                setColor(Utils.lightenColor(initialColor, 0.06f))
+                cornerRadius = dpLocal(24f).toFloat()
+            }
         }
+        if (act != null && isCleanGlass) IosGlassTheme.apply3DElevation(this, 8f)
     }
 
     val previewRow = LinearLayout(context).apply {
@@ -105,7 +113,7 @@ fun createColorWheelPicker(context: Context, initialColor: Int, onColorChanged: 
         background = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(initialColor)
-            setStroke(dpLocal(2f), Color.WHITE)
+            setStroke(dpLocal(2f), if (act?.isAuroraMode == true) AuroraBorealisTheme.AURORA_PRIMARY else Color.WHITE)
         }
     }
 
@@ -138,7 +146,17 @@ fun createColorWheelPicker(context: Context, initialColor: Int, onColorChanged: 
         }
     }
 
-    val brightLabel = TextView(context).apply { text = "☀️ בהירות"; setTextColor(Color.WHITE); textSize = 14f }
+    val brightLabel = TextView(context).apply {
+        text = if (isCleanGlass) "בהירות" else "☀️ בהירות"
+        setTextColor(Color.WHITE)
+        textSize = 14f
+        gravity = Gravity.CENTER_VERTICAL
+        compoundDrawablePadding = dpLocal(8f)
+        if (isCleanGlass) {
+            val sunIcon = AuroraBorealisTheme.createVectorIcon(context, 202, accentTint, 18f, act?.isAuroraMode == true)
+            setCompoundDrawables(null, null, sunIcon, null)
+        }
+    }
     val brightSeek = SeekBar(context).apply {
         max = 100
         progress = (hsv[2] * 100).toInt()
@@ -155,7 +173,17 @@ fun createColorWheelPicker(context: Context, initialColor: Int, onColorChanged: 
         })
     }
 
-    val alphaLabel = TextView(context).apply { text = "💧 שקיפות"; setTextColor(Color.WHITE); textSize = 14f }
+    val alphaLabel = TextView(context).apply {
+        text = if (isCleanGlass) "שקיפות" else "💧 שקיפות"
+        setTextColor(Color.WHITE)
+        textSize = 14f
+        gravity = Gravity.CENTER_VERTICAL
+        compoundDrawablePadding = dpLocal(8f)
+        if (isCleanGlass) {
+            val dropIcon = AuroraBorealisTheme.createVectorIcon(context, 203, accentTint, 18f, act?.isAuroraMode == true)
+            setCompoundDrawables(null, null, dropIcon, null)
+        }
+    }
     val alphaSeek = SeekBar(context).apply {
         max = 255
         progress = currentAlpha
@@ -178,3 +206,4 @@ fun createColorWheelPicker(context: Context, initialColor: Int, onColorChanged: 
     card.addView(alphaSeek)
     return card
 }
+ 
