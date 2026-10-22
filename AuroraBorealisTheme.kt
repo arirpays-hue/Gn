@@ -1,4 +1,3 @@
-
 package com.example.calculator
 
 import android.content.Context
@@ -11,13 +10,11 @@ import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.RippleDrawable
 import android.text.SpannableString
 import android.text.style.StyleSpan
-import android.view.View
-import android.view.ViewGroup
 import android.widget.TextView
 
 object AuroraBorealisTheme {
 
-    // --- Color Palette & Atmospheric Tokens ---
+    // --- Color Palette & Atmospheric Tokens (Aurora Borealis Spec) ---
     val EMERALD_NIGHT = Color.parseColor("#0A1C1A")
     val ARCTIC_BLUE = Color.parseColor("#07111E")
     val COSMIC_PURPLE = Color.parseColor("#1B0F2E")
@@ -47,42 +44,9 @@ object AuroraBorealisTheme {
             ?.apply()
     }
 
-    // הסרת אימוג'ים מכל הכותרות, הכפתורים והתפריטים במצב נקי
-    fun cleanText(rawText: String, isCleanMode: Boolean): String {
-        if (!isCleanMode) return rawText
-        return rawText.replace(Regex("[\\p{So}\\p{Cn}]"), "")
-            .replace("☀️", "")
-            .replace("💧", "")
-            .replace("⇅", "")
-            .trim()
-    }
-
-    // החלפה אוטומטית של השם "iOS 26 Liquid Glass" או "iOS Glass" ל-"Liquid Glass Pro" בכל עץ התצוגה
-    fun sanitizeBrandingInViewTree(root: View?, isCleanMode: Boolean) {
-        if (root == null) return
-        if (root is TextView) {
-            var txt = root.text?.toString() ?: ""
-            if (txt.contains("iOS 26 Liquid Glass")) {
-                txt = txt.replace("iOS 26 Liquid Glass", IosGlassTheme.LIQUID_GLASS_THEME_NAME)
-            }
-            if (txt == "iOS Glass") {
-                txt = "Liquid Glass"
-            }
-            if (isCleanMode) {
-                txt = cleanText(txt, true)
-            }
-            if (txt != root.text?.toString()) {
-                root.text = txt
-            }
-        } else if (root is ViewGroup) {
-            for (i in 0 until root.childCount) {
-                sanitizeBrandingInViewTree(root.getChildAt(i), isCleanMode)
-            }
-        }
-    }
-
     // אפקט מתכתי זוהר לכותרת תפריט הצד: linear-gradient(180deg, #FFFFFF 0%, #70C1B3 100%)
-    fun applyHeaderMetallicGradient(tv: TextView, isAurora: Boolean, isLiquidGlass: Boolean) {
+    fun applyHeaderMetallicGradient(tv: TextView?, isAurora: Boolean, isLiquidGlass: Boolean) {
+        if (tv == null) return
         tv.post {
             if (tv.height > 0) {
                 val bottomCol = when {
@@ -98,7 +62,7 @@ object AuroraBorealisTheme {
                     if (isAurora) {
                         tv.setShadowLayer(14f, 0f, 0f, Color.argb(120, 0, 245, 212))
                     } else {
-                        tv.setShadowLayer(6f, 0f, 2f, Color.argb(90, 0, 0, 0))
+                        tv.setShadowLayer(8f, 0f, 2f, Color.argb(90, 0, 0, 0))
                     }
                     tv.invalidate()
                 } else {
@@ -110,7 +74,7 @@ object AuroraBorealisTheme {
         }
     }
 
-    // רקע אווירתי של זוהר הצפון (#0A1C1A -> #07111E -> #1B0F2E)
+    // רקע אווירתי של זוהר הצפון: Deep Emerald Night -> Midnight Arctic Blue -> Soft Cosmic Purple
     fun createAuroraAtmosphericBackground(): Drawable {
         return GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
@@ -125,8 +89,8 @@ object AuroraBorealisTheme {
 
         val textColor = when {
             isPressed -> Color.WHITE
-            isOperator -> EMERALD_NIGHT
-            isCommand -> AURORA_PRIMARY
+            isOperator -> EMERALD_NIGHT // Deep dark-slate (#0A1C1A) for high contrast on vibrant green
+            isCommand -> AURORA_PRIMARY // Mint-Cyan (#00F5D4)
             else -> Color.WHITE
         }
         tv.setTextColor(textColor)
@@ -144,9 +108,9 @@ object AuroraBorealisTheme {
             // Internal Glow Pulse: drop-shadow(0 0 12px rgba(0, 245, 212, 0.9))
             tv.setShadowLayer(20f, 0f, 0f, Color.argb(235, 0, 245, 212))
         } else {
-            // Etched & Glowing mode: dark inner shadow + backlit neon rim
+            // Etched & Glowing mode: dark inner shadow + soft backlit neon rim
             if (isOperator) {
-                tv.setShadowLayer(4f, 0f, 1f, Color.argb(110, 255, 255, 255))
+                tv.setShadowLayer(4f, 0f, 1f, Color.argb(120, 255, 255, 255))
             } else {
                 tv.setShadowLayer(8f, 0f, -1.2f, Color.argb(150, 0, 245, 212))
             }
@@ -167,7 +131,7 @@ object AuroraBorealisTheme {
 
         val (topColor, bottomColor) = when {
             isOperator -> {
-                // Vibrant Aurora Green Liquid Glass: rgba(0, 245, 212, 0.8) to rgba(16, 185, 129, 0.6)
+                // Vibrant Aurora Green Liquid Glass: linear-gradient(135deg, rgba(0, 245, 212, 0.8), rgba(16, 185, 129, 0.6))
                 Color.argb((205 + boost).coerceAtMost(255), 0, 245, 212) to
                         Color.argb((160 + boost).coerceAtMost(255), 16, 185, 129)
             }
@@ -234,13 +198,13 @@ object AuroraBorealisTheme {
         val glass = GradientDrawable(
             GradientDrawable.Orientation.TL_BR,
             intArrayOf(
-                Color.argb(if (isDrawer) 225 else 200, 15, 28, 36),
-                Color.argb(if (isDrawer) 215 else 185, 10, 20, 26),
-                Color.argb(if (isDrawer) 205 else 170, 18, 32, 40)
+                Color.argb(if (isDrawer) 215 else 190, 15, 28, 36),
+                Color.argb(if (isDrawer) 205 else 175, 10, 20, 26),
+                Color.argb(if (isDrawer) 195 else 160, 18, 32, 40)
             )
         ).apply {
             cornerRadius = radius
-            setStroke(activity.dp(1.2f), Color.argb(125, 0, 245, 212))
+            setStroke(activity.dp(1.2f), Color.argb(120, 0, 245, 212))
         }
 
         val specularRim = GradientDrawable(
@@ -260,12 +224,12 @@ object AuroraBorealisTheme {
         return GradientDrawable(
             GradientDrawable.Orientation.LEFT_RIGHT,
             intArrayOf(
-                Color.argb(80, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)),
+                Color.argb(75, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)),
                 Color.argb(35, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol))
             )
         ).apply {
             cornerRadius = radius
-            setStroke(activity.dp(1f), Color.argb(165, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)))
+            setStroke(activity.dp(1f), Color.argb(155, Color.red(glowCol), Color.green(glowCol), Color.blue(glowCol)))
         }
     }
 
@@ -290,7 +254,7 @@ object AuroraBorealisTheme {
                 strokeCap = Paint.Cap.ROUND
                 strokeJoin = Paint.Join.ROUND
                 if (isGlowing) {
-                    setShadowLayer(5f * context.resources.displayMetrics.density, 0f, 0f, Color.argb(145, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor)))
+                    setShadowLayer(5f * context.resources.displayMetrics.density, 0f, 0f, Color.argb(150, Color.red(tintColor), Color.green(tintColor), Color.blue(tintColor)))
                 }
             }
             private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -370,5 +334,4 @@ object AuroraBorealisTheme {
         }
     }
 }
-
  
